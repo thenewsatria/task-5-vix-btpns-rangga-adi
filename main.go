@@ -8,7 +8,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/controllers"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/database"
-	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/helpers"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/models"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/router"
 )
@@ -29,10 +28,9 @@ func main() {
 	}
 	db.MigrateDB()
 
-	validator := helpers.NewValidator()
 	userModel := models.NewUserModel(db)
 
-	userController := controllers.NewUserController(userModel, validator)
+	userController := controllers.NewUserController(userModel)
 
 	router.UserRouting(app, userController)
 	app.Run()

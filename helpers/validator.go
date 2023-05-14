@@ -10,8 +10,7 @@ type IValidator interface {
 	Validate(someStruct interface{}) ([]string, error)
 }
 
-type Validator struct {
-}
+type Validator struct{}
 
 func NewValidator() IValidator {
 	return &Validator{}

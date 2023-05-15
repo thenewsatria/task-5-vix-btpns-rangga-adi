@@ -8,27 +8,29 @@ import (
 )
 
 type IUserController interface {
-	HandleRegister(validator helpers.IValidator, hasher helpers.IHasher) gin.HandlerFunc
+	HandleRegister(hasher helpers.IHasher, webToken helpers.IWebToken) gin.HandlerFunc
 }
 
 type UserController struct {
-	model models.IUserModel
+	model     models.IUserModel
+	validator helpers.IValidator
 }
 
-func NewUserController(model models.IUserModel) IUserController {
+func NewUserController(model models.IUserModel, validator helpers.IValidator) IUserController {
 	return &UserController{
-		model: model,
+		model:     model,
+		validator: validator,
 	}
 }
 
-func (userController *UserController) HandleRegister(validator helpers.IValidator, hasher helpers.IHasher) gin.HandlerFunc {
+func (userController *UserController) HandleRegister(hasher helpers.IHasher, webToken helpers.IWebToken) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// [ ] Memvalidasi request dari json
-		// [ ] Memvalidasi apakah email atau attribut unik lain telah terpakai
-		// [ ] Melakukan hash pada password
-		// [ ] Menyimpan user pada database
-		// [ ] Membuat access token
-		// [ ] Mengembalikan respon berupa access token
+		// [x] Memvalidasi request dari json
+		// [x] Memvalidasi apakah email atau attribut unik lain telah terpakai
+		// [x] Melakukan hash pada password
+		// [x] Membuat access token
+		// [x] Menyimpan user pada database
+		// [x] Mengembalikan respon berupa access token
 		var user app.User
 		user.Photos = []app.Photo{}
 		if err := c.ShouldBindJSON(&user); err != nil {
@@ -37,7 +39,7 @@ func (userController *UserController) HandleRegister(validator helpers.IValidato
 			})
 			return
 		}
-		msg, err := validator.Validate(user)
+		msg, err := userController.validator.Validate(user)
 		if err != nil {
 			c.JSON(400, gin.H{
 				"error": msg,
@@ -58,12 +60,21 @@ func (userController *UserController) HandleRegister(validator helpers.IValidato
 			return
 		}
 		user.Password = hashedPassword
+		accessToken, err := webToken.GenerateAccessToken(user.Email)
+		if err != nil {
+			c.JSON(500, gin.H{
+				"error": "Email is already taken",
+			})
+			return
+		}
 		if err := userController.model.CreateUser(&user); err != nil {
 			c.JSON(500, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
-		c.JSON(200, user)
+		c.JSON(200, gin.H{
+			"access_token": accessToken,
+		})
 	}
 }

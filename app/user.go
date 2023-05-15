@@ -6,7 +6,7 @@ import (
 
 type User struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
-	Username  string    `gorm:"not null" json:"username" valid:"required~username is required"`
+	Username  string    `gorm:"not null" json:"username" valid:"required~username: username is required"`
 	Email     string    `gorm:"unique;not null" json:"email" valid:"email,required~email: email is required"`
 	Password  string    `gorm:"not null" json:"password" valid:"required~password: password is required,minstringlength(6)~password: password must be at least 6 characters"`
 	Photos    []Photo   `json:"photos"`

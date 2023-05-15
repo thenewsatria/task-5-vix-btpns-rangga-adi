@@ -7,7 +7,7 @@ import (
 )
 
 type IValidator interface {
-	Validate(someStruct interface{}) ([]string, error)
+	Validate(someStruct interface{}) (map[string]string, error)
 }
 
 type Validator struct{}
@@ -16,10 +16,17 @@ func NewValidator() IValidator {
 	return &Validator{}
 }
 
-func (v *Validator) Validate(someStruct interface{}) ([]string, error) {
+func (v *Validator) Validate(someStruct interface{}) (map[string]string, error) {
+	var errorMessages map[string]string = map[string]string{}
 	_, err := govalidator.ValidateStruct(someStruct)
 	if err != nil {
-		return strings.Split(err.Error(), ";"), err
+		for _, msg := range strings.Split(err.Error(), ";") {
+			msgDetail := strings.Split(msg, ":")
+			key := msgDetail[0]
+			val := strings.TrimSpace(msgDetail[1])
+			errorMessages[key] = val
+		}
+		return errorMessages, err
 	}
-	return []string{}, nil
+	return errorMessages, nil
 }

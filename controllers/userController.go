@@ -25,37 +25,46 @@ func NewUserController(model models.IUserModel, validator helpers.IValidator) IU
 
 func (userController *UserController) HandleRegister(hasher helpers.IHasher, webToken helpers.IWebToken) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// NOTE: Langkah Operasi User Register
 		// [x] Memvalidasi request dari json
 		// [x] Memvalidasi apakah email atau attribut unik lain telah terpakai
 		// [x] Melakukan hash pada password
 		// [x] Membuat access token
 		// [x] Menyimpan user pada database
 		// [x] Mengembalikan respon berupa access token
+
 		var user app.User
-		user.Photos = []app.Photo{}
 		if err := c.ShouldBindJSON(&user); err != nil {
 			c.JSON(400, gin.H{
-				"error": err.Error(),
+				"status": "fail",
+				"data": gin.H{
+					"json": "invalid json",
+				},
 			})
 			return
 		}
 		msg, err := userController.validator.Validate(user)
 		if err != nil {
 			c.JSON(400, gin.H{
-				"error": msg,
+				"status": "fail",
+				"data":   msg,
 			})
 			return
 		}
 		if !userController.model.IsEmailAvailable(user.Email) {
 			c.JSON(400, gin.H{
-				"error": "Email is already taken",
+				"status": "fail",
+				"data": gin.H{
+					"email": "Email is already taken",
+				},
 			})
 			return
 		}
 		hashedPassword, err := hasher.HashString(user.Password)
 		if err != nil {
 			c.JSON(500, gin.H{
-				"error": "Email is already taken",
+				"status":  "error",
+				"message": err.Error(),
 			})
 			return
 		}
@@ -63,18 +72,23 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 		accessToken, err := webToken.GenerateAccessToken(user.Email)
 		if err != nil {
 			c.JSON(500, gin.H{
-				"error": "Email is already taken",
+				"status":  "error",
+				"message": err.Error(),
 			})
 			return
 		}
 		if err := userController.model.CreateUser(&user); err != nil {
 			c.JSON(500, gin.H{
-				"error": err.Error(),
+				"status":  "error",
+				"message": err.Error(),
 			})
 			return
 		}
 		c.JSON(200, gin.H{
-			"access_token": accessToken,
+			"status": "success",
+			"data": gin.H{
+				"accessToken": accessToken,
+			},
 		})
 	}
 }

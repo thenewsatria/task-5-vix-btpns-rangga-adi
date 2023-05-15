@@ -17,6 +17,7 @@ func UserRouting(route *gin.Engine, db database.IDatabase) {
 
 	hasher := helpers.NewHasher()
 	webToken := helpers.NewWebToken()
+
 	usersRoute := route.Group("/users")
 	{
 		usersRoute.POST("/register", userController.HandleRegister(hasher, webToken))

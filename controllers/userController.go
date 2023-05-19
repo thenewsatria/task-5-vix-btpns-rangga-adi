@@ -51,7 +51,9 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			})
 			return
 		}
-		if !userController.model.IsEmailAvailable(user.Email) {
+
+		relatedUser, err := userController.model.GetByEmail(user.Email)
+		if relatedUser != nil {
 			c.JSON(400, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
@@ -77,7 +79,7 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			})
 			return
 		}
-		if err := userController.model.CreateUser(&user); err != nil {
+		if _, err = userController.model.CreateUser(&user); err != nil {
 			c.JSON(500, &app.JsendErrorResponse{
 				Status:  "error",
 				Message: err.Error(),

@@ -1,12 +1,10 @@
 package models
 
 import (
-	"errors"
 	"time"
 
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/database"
-	"gorm.io/gorm"
 )
 
 type User struct {
@@ -20,8 +18,8 @@ type User struct {
 }
 
 type IUserModel interface {
-	CreateUser(user *app.UserRegisterRequest) error
-	IsEmailAvailable(userEmail string) bool
+	CreateUser(user *app.UserRegisterRequest) (*User, error)
+	GetByEmail(userEmail string) (*User, error)
 }
 type UserModel struct {
 	db database.IDatabase
@@ -33,26 +31,27 @@ func NewUserModel(db database.IDatabase) IUserModel {
 	}
 }
 
-func (userModel *UserModel) CreateUser(u *app.UserRegisterRequest) error {
-	newUser := &User{
+func (userModel *UserModel) CreateUser(u *app.UserRegisterRequest) (*User, error) {
+	newUser := User{
 		Username: u.Username,
 		Email:    u.Email,
 		Password: u.Password,
 		Photos:   []Photo{},
 	}
 
-	result := userModel.db.GetClient().Create(newUser)
+	result := userModel.db.GetClient().Create(&newUser)
 	if result.Error != nil {
-		return result.Error
+		return nil, result.Error
 	}
-	return nil
+	return &newUser, nil
 }
 
-func (UserModel *UserModel) IsEmailAvailable(userEmail string) bool {
-	client := UserModel.db.GetClient()
-	result := client.Where("email = ?", userEmail).First(&User{})
+func (userModel *UserModel) GetByEmail(userEmail string) (*User, error) {
+	client := userModel.db.GetClient()
+	var user User
+	result := client.Where("email = ?", userEmail).First(&user)
 	if result.Error != nil {
-		return errors.Is(result.Error, gorm.ErrRecordNotFound)
+		return nil, result.Error
 	}
-	return false
+	return &user, nil
 }

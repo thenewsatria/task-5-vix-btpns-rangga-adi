@@ -25,36 +25,36 @@ func NewUserController(model models.IUserModel, validator helpers.IValidator) IU
 
 func (userController *UserController) HandleRegister(hasher helpers.IHasher, webToken helpers.IWebToken) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// NOTE: Langkah Operasi User Register
-		// [x] Memvalidasi request dari json
+		// NOTE: Langkah Kasus Penggunaan User Register
+		// [x] Memvalidasi request berupa json
 		// [x] Memvalidasi apakah email atau attribut unik lain telah terpakai
 		// [x] Melakukan hash pada password
 		// [x] Membuat access token
 		// [x] Menyimpan user pada database
 		// [x] Mengembalikan respon berupa access token
 
-		var user app.User
+		var user app.UserRegisterRequest
 		if err := c.ShouldBindJSON(&user); err != nil {
-			c.JSON(400, gin.H{
-				"status": "fail",
-				"data": gin.H{
-					"json": "invalid json",
+			c.JSON(400, &app.JsendFailResponse{
+				Status: "fail",
+				Data: gin.H{
+					"json": "Invalid json format",
 				},
 			})
 			return
 		}
 		msg, err := userController.validator.Validate(user)
 		if err != nil {
-			c.JSON(400, gin.H{
-				"status": "fail",
-				"data":   msg,
+			c.JSON(400, &app.JsendFailResponse{
+				Status: "fail",
+				Data:   msg,
 			})
 			return
 		}
 		if !userController.model.IsEmailAvailable(user.Email) {
-			c.JSON(400, gin.H{
-				"status": "fail",
-				"data": gin.H{
+			c.JSON(400, &app.JsendFailResponse{
+				Status: "fail",
+				Data: gin.H{
 					"email": "Email is already taken",
 				},
 			})
@@ -62,32 +62,32 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 		}
 		hashedPassword, err := hasher.HashString(user.Password)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"status":  "error",
-				"message": err.Error(),
+			c.JSON(500, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
 			})
 			return
 		}
 		user.Password = hashedPassword
 		accessToken, err := webToken.GenerateAccessToken(user.Email)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"status":  "error",
-				"message": err.Error(),
+			c.JSON(500, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
 			})
 			return
 		}
 		if err := userController.model.CreateUser(&user); err != nil {
-			c.JSON(500, gin.H{
-				"status":  "error",
-				"message": err.Error(),
+			c.JSON(500, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
 			})
 			return
 		}
-		c.JSON(200, gin.H{
-			"status": "success",
-			"data": gin.H{
-				"accessToken": accessToken,
+		c.JSON(201, &app.JsendSuccessResponse{
+			Status: "success",
+			Data: &app.UserAuthResponse{
+				AccessToken: accessToken,
 			},
 		})
 	}

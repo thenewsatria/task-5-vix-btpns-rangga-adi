@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/database"
+	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/models"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/router"
 )
 
@@ -21,7 +22,13 @@ func main() {
 		os.Getenv("DB_PASSWD"),
 		os.Getenv("DB_NAME"),
 	)
-	db.MigrateDB()
+	if err != nil {
+		log.Fatal("Error connecting to database")
+	}
+	err = db.MigrateDB(&models.User{}, &models.Photo{})
+	if err != nil {
+		log.Fatal("Error migrating models to database")
+	}
 	router.RouteApp(app, db)
 	app.Run()
 }

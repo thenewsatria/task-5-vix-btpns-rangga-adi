@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 
-	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -12,7 +11,7 @@ type IDatabase interface {
 	GetClient() *gorm.DB
 	Ping() error
 	ConnectDB() error
-	MigrateDB()
+	MigrateDB(models ...interface{}) error
 	CloseDB() error
 }
 
@@ -62,8 +61,14 @@ func (db *Database) ConnectDB() error {
 	return nil
 }
 
-func (db *Database) MigrateDB() {
-	db.client.AutoMigrate(&app.User{}, &app.Photo{})
+func (db *Database) MigrateDB(models ...interface{}) error {
+	for _, model := range models {
+		err := db.client.AutoMigrate(model)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (db *Database) CloseDB() error {

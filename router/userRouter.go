@@ -9,7 +9,6 @@ import (
 )
 
 func UserRouting(route *gin.Engine, db database.IDatabase) {
-
 	userModel := models.NewUserModel(db)
 	validator := helpers.NewValidator()
 

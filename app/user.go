@@ -21,6 +21,11 @@ type UserLoginRequest struct {
 	Password string `json:"password" valid:"required~password: password is required"`
 }
 
+type UserUpdateRequest struct {
+	Username string `json:"username" valid:"required~username: username is required"`
+	Password string `json:"password" valid:"required~password: password is required,minstringlength(6)~password: password must be at least 6 characters"`
+}
+
 type UserAuthResponse struct {
 	AccessToken string `json:"accessToken"`
 }

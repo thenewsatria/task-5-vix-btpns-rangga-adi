@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"errors"
 	"os"
 	"strconv"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 type IWebToken interface {
 	GenerateAccessToken(email string) (string, error)
+	ParseToken(tokenStr string) (*UserClaims, error)
 }
 
 type WebToken struct{}
@@ -42,4 +44,21 @@ func (wt *WebToken) GenerateAccessToken(email string) (string, error) {
 		return "", err
 	}
 	return tokenString, err
+}
+
+func (wt *WebToken) ParseToken(tokenStr string) (*UserClaims, error) {
+	tokenSecret := os.Getenv("JWT_SECRET")
+	claims := &UserClaims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(tkn *jwt.Token) (interface{}, error) {
+		return tokenSecret, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, errors.New("token: Token invalid")
+	}
+
+	return claims, nil
 }

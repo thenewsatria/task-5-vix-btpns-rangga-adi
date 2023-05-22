@@ -13,6 +13,7 @@ import (
 type IUserController interface {
 	HandleRegister(hasher helpers.IHasher, webToken helpers.IWebToken) gin.HandlerFunc
 	HandleLogin(hasher helpers.IHasher, webToken helpers.IWebToken) gin.HandlerFunc
+	HandleUpdate() gin.HandlerFunc
 }
 
 type UserController struct {
@@ -171,5 +172,11 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 				AccessToken: accessToken,
 			},
 		})
+	}
+}
+
+func (UserController *UserController) HandleUpdate() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
 	}
 }

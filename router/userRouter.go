@@ -5,6 +5,7 @@ import (
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/controllers"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/database"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/helpers"
+	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/middlewares"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/models"
 )
 
@@ -16,11 +17,15 @@ func UserRouting(route *gin.Engine, db database.IDatabase) {
 
 	hasher := helpers.NewHasher()
 	webToken := helpers.NewWebToken()
+	authMW := middlewares.NewAuthMiddleware(userModel, webToken)
 
 	usersRoute := route.Group("/users")
 	{
 		usersRoute.POST("/register", userController.HandleRegister(hasher, webToken))
 		usersRoute.GET("/login", userController.HandleLogin(hasher, webToken))
-		usersRoute.PUT("/:userId", userController.)
+		usersRoute.Use(authMW.Guard())
+		{
+			usersRoute.PUT("/:userId", userController.HandleUpdate())
+		}
 	}
 }

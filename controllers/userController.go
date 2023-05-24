@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
@@ -148,7 +149,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 		}
 
 		if !hasher.CheckHash(currentUser.Password, loginRequest.Password) {
-			c.JSON(401, &app.JsendFailResponse{
+			c.JSON(http.StatusUnauthorized, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
 					"message": "Email and password provided doesn't match",
@@ -159,14 +160,14 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 
 		accessToken, err := webToken.GenerateAccessToken(currentUser.Email)
 		if err != nil {
-			c.JSON(500, &app.JsendErrorResponse{
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
 				Message: err.Error(),
 			})
 			return
 		}
 
-		c.JSON(201, &app.JsendSuccessResponse{
+		c.JSON(http.StatusCreated, &app.JsendSuccessResponse{
 			Status: "success",
 			Data: &app.UserAuthResponse{
 				AccessToken: accessToken,
@@ -177,6 +178,12 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 
 func (UserController *UserController) HandleUpdate() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
+		currentUser := c.MustGet("currentUser").(*models.User)
+		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
+			Status: "success",
+			Data: gin.H{
+				"currentEmail": currentUser.Email,
+			},
+		})
 	}
 }

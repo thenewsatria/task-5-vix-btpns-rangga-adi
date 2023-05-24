@@ -49,16 +49,17 @@ func (wt *WebToken) GenerateAccessToken(email string) (string, error) {
 func (wt *WebToken) ParseToken(tokenStr string) (*UserClaims, error) {
 	tokenSecret := os.Getenv("JWT_SECRET")
 	claims := &UserClaims{}
+
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(tkn *jwt.Token) (interface{}, error) {
-		return tokenSecret, nil
+		return []byte(tokenSecret), nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if !token.Valid {
+	if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
+		return claims, nil
+	} else {
 		return nil, errors.New("token: Token invalid")
 	}
-
-	return claims, nil
 }

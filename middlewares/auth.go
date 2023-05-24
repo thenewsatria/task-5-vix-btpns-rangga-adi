@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -50,6 +51,7 @@ func (authMW *AuthMiddleware) Guard() gin.HandlerFunc {
 		}
 
 		tokenStr := strings.Split(bearerToken, " ")[1]
+		fmt.Println(tokenStr)
 		claims, err := authMW.webToken.ParseToken(tokenStr)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{

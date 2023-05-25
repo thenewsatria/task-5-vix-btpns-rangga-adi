@@ -28,6 +28,7 @@ func UserRouting(route *gin.Engine, db database.IDatabase) {
 			idSubRoute.Use(authMW.Guard()).Use(authMW.Authorize())
 			{
 				idSubRoute.PUT("/", userController.HandleUpdate())
+				idSubRoute.DELETE("/", userController.HandleDelete())
 			}
 		}
 	}

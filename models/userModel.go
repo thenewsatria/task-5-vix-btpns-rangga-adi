@@ -23,7 +23,9 @@ type IUserModel interface {
 	GetByEmail(userEmail string, detailed bool) (*User, error)
 	GetById(userId uint, detailed bool) (*User, error)
 	UpdateUser(user *User, updateBody *app.UserUpdateRequest) (*User, error)
+	DeleteUser(user *User) (*User, error)
 }
+
 type UserModel struct {
 	db database.IDatabase
 }
@@ -86,6 +88,16 @@ func (userModel *UserModel) UpdateUser(user *User, updateBody *app.UserUpdateReq
 
 	result := client.Save(user)
 
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return user, nil
+}
+
+func (userModel *UserModel) DeleteUser(user *User) (*User, error) {
+	client := userModel.db.GetClient()
+	result := client.Delete(user)
 	if result.Error != nil {
 		return nil, result.Error
 	}

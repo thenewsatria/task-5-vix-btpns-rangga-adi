@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/helpers"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/models"
+	"gorm.io/gorm"
 )
 
 type IAuthMiddleware interface {
@@ -93,8 +95,28 @@ func (authMW *AuthMiddleware) Authorize() gin.HandlerFunc {
 					"user_id": "Invalid user ID",
 				},
 			})
+			return
 		}
-		if currentUser.ID == uint(intUserId) {
+
+		requestedUser, err := authMW.userModel.GetById(uint(intUserId), false)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.AbortWithStatusJSON(http.StatusNotFound, &app.JsendFailResponse{
+					Status: "fail",
+					Data: gin.H{
+						"user": "There's no user found related with provided user id",
+					},
+				})
+				return
+			}
+			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})
+			return
+		}
+
+		if currentUser.ID == requestedUser.ID {
 			c.Next()
 		} else {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, &app.JsendFailResponse{
@@ -103,6 +125,7 @@ func (authMW *AuthMiddleware) Authorize() gin.HandlerFunc {
 					"message": "Access denied, you are unauthorized to access this resource",
 				},
 			})
+			return
 		}
 	}
 }

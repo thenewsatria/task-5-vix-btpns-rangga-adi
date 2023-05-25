@@ -39,9 +39,9 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 		// [x] Menyimpan user pada database
 		// [x] Mengembalikan respon berupa access token
 
-		var user app.UserRegisterRequest
-		if err := c.ShouldBindJSON(&user); err != nil {
-			c.JSON(400, &app.JsendFailResponse{
+		var registerRequest app.UserRegisterRequest
+		if err := c.ShouldBindJSON(&registerRequest); err != nil {
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
 					"json": "Invalid json format",
@@ -49,18 +49,24 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			})
 			return
 		}
-		msg, err := userController.validator.Validate(user)
-		if err != nil {
-			c.JSON(400, &app.JsendFailResponse{
+
+		msg, _ := userController.validator.Validate(registerRequest)
+
+		if registerRequest.Password != registerRequest.ConfirmPassword {
+			msg["confirmPassword"] = "password must be matched"
+		}
+
+		if len(msg) != 0 {
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data:   msg,
 			})
 			return
 		}
 
-		relatedUser, _ := userController.model.GetByEmail(user.Email)
+		relatedUser, _ := userController.model.GetByEmail(registerRequest.Email, false)
 		if relatedUser != nil {
-			c.JSON(400, &app.JsendFailResponse{
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
 					"email": "Email is already taken",
@@ -68,31 +74,31 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			})
 			return
 		}
-		hashedPassword, err := hasher.HashString(user.Password)
+		hashedPassword, err := hasher.HashString(registerRequest.Password)
 		if err != nil {
-			c.JSON(500, &app.JsendErrorResponse{
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
 				Message: err.Error(),
 			})
 			return
 		}
-		user.Password = hashedPassword
-		accessToken, err := webToken.GenerateAccessToken(user.Email)
+		registerRequest.Password = hashedPassword
+		accessToken, err := webToken.GenerateAccessToken(registerRequest.Email)
 		if err != nil {
-			c.JSON(500, &app.JsendErrorResponse{
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
 				Message: err.Error(),
 			})
 			return
 		}
-		if _, err = userController.model.CreateUser(&user); err != nil {
-			c.JSON(500, &app.JsendErrorResponse{
+		if _, err = userController.model.CreateUser(&registerRequest); err != nil {
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
 				Message: err.Error(),
 			})
 			return
 		}
-		c.JSON(201, &app.JsendSuccessResponse{
+		c.JSON(http.StatusCreated, &app.JsendSuccessResponse{
 			Status: "success",
 			Data: &app.UserAuthResponse{
 				AccessToken: accessToken,
@@ -112,7 +118,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 	return func(c *gin.Context) {
 		var loginRequest app.UserLoginRequest
 		if err := c.ShouldBindJSON(&loginRequest); err != nil {
-			c.JSON(400, &app.JsendFailResponse{
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
 					"json": "Invalid json format",
@@ -121,19 +127,20 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 			return
 		}
 
-		msg, err := userController.validator.Validate(loginRequest)
-		if err != nil {
-			c.JSON(400, &app.JsendFailResponse{
+		msg, _ := userController.validator.Validate(loginRequest)
+
+		if len(msg) != 0 {
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data:   msg,
 			})
 			return
 		}
 
-		currentUser, err := userController.model.GetByEmail(loginRequest.Email)
+		currentUser, err := userController.model.GetByEmail(loginRequest.Email, false)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(401, &app.JsendFailResponse{
+				c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 					Status: "fail",
 					Data: gin.H{
 						"message": "Email and password provided doesn't match",
@@ -141,7 +148,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 				})
 				return
 			}
-			c.JSON(500, &app.JsendErrorResponse{
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
 				Message: err.Error(),
 			})
@@ -167,7 +174,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 			return
 		}
 
-		c.JSON(http.StatusCreated, &app.JsendSuccessResponse{
+		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
 			Status: "success",
 			Data: &app.UserAuthResponse{
 				AccessToken: accessToken,
@@ -176,13 +183,68 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 	}
 }
 
-func (UserController *UserController) HandleUpdate() gin.HandlerFunc {
+func (userController *UserController) HandleUpdate() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		currentUser := c.MustGet("currentUser").(*models.User)
-		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
+
+		var updateRequest app.UserUpdateRequest
+		if err := c.ShouldBindJSON(&updateRequest); err != nil {
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
+				Status: "fail",
+				Data: gin.H{
+					"json": "Invalid json format",
+				},
+			})
+			return
+		}
+
+		msg, _ := userController.validator.Validate(updateRequest)
+
+		if len(msg) != 0 {
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
+				Status: "fail",
+				Data:   msg,
+			})
+			return
+		}
+
+		updatedUser, err := userController.model.UpdateUser(currentUser, &updateRequest)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "fail",
+				Message: err.Error(),
+			})
+			return
+		}
+
+		detailedUser, err := userController.model.GetById(updatedUser.ID, true)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "fail",
+				Message: err.Error(),
+			})
+			return
+		}
+
+		photosResponse := []app.PhotoGeneralResponse{}
+		for _, photo := range detailedUser.Photos {
+			photosResponse = append(photosResponse, app.PhotoGeneralResponse{
+				ID:        photo.ID,
+				UserID:    photo.UserID,
+				CreatedAt: photo.CreatedAt,
+				UpdatedAt: photo.UpdatedAt,
+			})
+		}
+
+		c.JSON(http.StatusCreated, &app.JsendSuccessResponse{
 			Status: "success",
-			Data: gin.H{
-				"currentEmail": currentUser.Email,
+			Data: &app.UserDetailGeneralResponse{
+				ID:        detailedUser.ID,
+				Username:  detailedUser.Username,
+				Email:     detailedUser.Email,
+				Photos:    photosResponse,
+				CreatedAt: detailedUser.CreatedAt,
+				UpdatedAt: detailedUser.UpdatedAt,
 			},
 		})
 	}

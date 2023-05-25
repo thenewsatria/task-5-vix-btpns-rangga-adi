@@ -5,6 +5,7 @@ import (
 
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/database"
+	"gorm.io/gorm"
 )
 
 type User struct {
@@ -19,7 +20,9 @@ type User struct {
 
 type IUserModel interface {
 	CreateUser(user *app.UserRegisterRequest) (*User, error)
-	GetByEmail(userEmail string) (*User, error)
+	GetByEmail(userEmail string, detailed bool) (*User, error)
+	GetById(userId uint, detailed bool) (*User, error)
+	UpdateUser(user *User, updateBody *app.UserUpdateRequest) (*User, error)
 }
 type UserModel struct {
 	db database.IDatabase
@@ -46,12 +49,46 @@ func (userModel *UserModel) CreateUser(u *app.UserRegisterRequest) (*User, error
 	return &newUser, nil
 }
 
-func (userModel *UserModel) GetByEmail(userEmail string) (*User, error) {
+func (userModel *UserModel) GetByEmail(userEmail string, detailed bool) (*User, error) {
 	client := userModel.db.GetClient()
 	var user User
-	result := client.Where("email = ?", userEmail).First(&user)
+	var result *gorm.DB
+	if detailed {
+		result = client.Where("email = ?", userEmail).Preload("Photos").First(&user)
+	} else {
+		result = client.Where("email = ?", userEmail).First(&user)
+	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	return &user, nil
+}
+
+func (userModel *UserModel) GetById(userId uint, detailed bool) (*User, error) {
+	client := userModel.db.GetClient()
+	var user User
+	var result *gorm.DB
+	if detailed {
+		result = client.Preload("Photos").First(&user, userId)
+	} else {
+		result = client.First(&user, userId)
+	}
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+func (userModel *UserModel) UpdateUser(user *User, updateBody *app.UserUpdateRequest) (*User, error) {
+	client := userModel.db.GetClient()
+
+	user.Username = updateBody.Username
+
+	result := client.Save(user)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return user, nil
 }

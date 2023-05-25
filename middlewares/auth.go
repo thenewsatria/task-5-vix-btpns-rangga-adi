@@ -3,6 +3,7 @@ package middlewares
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,7 @@ import (
 
 type IAuthMiddleware interface {
 	Guard() gin.HandlerFunc
+	Authorize() gin.HandlerFunc
 }
 
 type AuthMiddleware struct {
@@ -34,7 +36,7 @@ func (authMW *AuthMiddleware) Guard() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
-					"token": "There's no token provided",
+					"token": "There's no token provided, please login",
 				},
 			})
 			return
@@ -61,7 +63,7 @@ func (authMW *AuthMiddleware) Guard() gin.HandlerFunc {
 			return
 		}
 
-		currentUser, err := authMW.userModel.GetByEmail(claims.Email)
+		currentUser, err := authMW.userModel.GetByEmail(claims.Email, false)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusNotFound, &app.JsendFailResponse{
 				Status: "fail",
@@ -73,5 +75,34 @@ func (authMW *AuthMiddleware) Guard() gin.HandlerFunc {
 		}
 		c.Set("currentUser", currentUser)
 		c.Next()
+	}
+}
+
+func (authMW *AuthMiddleware) Authorize() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		currentUser := c.MustGet("currentUser").(*models.User)
+
+		userId := c.Param("userId")
+
+		intUserId, err := strconv.ParseUint(userId, 10, 32)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, &app.JsendFailResponse{
+				Status: "fail",
+				Data: gin.H{
+					"user_id": "Invalid user ID",
+				},
+			})
+		}
+		if currentUser.ID == uint(intUserId) {
+			c.Next()
+		} else {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, &app.JsendFailResponse{
+				Status: "fail",
+				Data: gin.H{
+					"message": "Access denied, you are unauthorized to access this resource",
+				},
+			})
+		}
 	}
 }

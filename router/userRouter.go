@@ -23,9 +23,12 @@ func UserRouting(route *gin.Engine, db database.IDatabase) {
 	{
 		usersRoute.POST("/register", userController.HandleRegister(hasher, webToken))
 		usersRoute.GET("/login", userController.HandleLogin(hasher, webToken))
-		usersRoute.Use(authMW.Guard())
+		idSubRoute := usersRoute.Group("/:userId")
 		{
-			usersRoute.PUT("/:userId", userController.HandleUpdate())
+			idSubRoute.Use(authMW.Guard()).Use(authMW.Authorize())
+			{
+				idSubRoute.PUT("/", userController.HandleUpdate())
+			}
 		}
 	}
 }

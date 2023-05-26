@@ -21,6 +21,7 @@ type Photo struct {
 type IPhotoModel interface {
 	CreatePhoto(photo *app.PhotoCreationRequest) (*Photo, error)
 	GetOwner(userId uint) (*User, error)
+	GetAllPhoto() ([]Photo, error)
 }
 
 type PhotoModel struct {
@@ -57,4 +58,13 @@ func (photoModel *PhotoModel) GetOwner(userId uint) (*User, error) {
 		return nil, result.Error
 	}
 	return &owner, nil
+}
+
+func (photoModel *PhotoModel) GetAllPhoto() ([]Photo, error) {
+	var photos []Photo
+	result := photoModel.db.GetClient().Order("created_at desc").Find(&photos)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return photos, nil
 }

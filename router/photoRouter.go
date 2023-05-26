@@ -22,6 +22,7 @@ func PhotoRouting(route *gin.Engine, db database.IDatabase) {
 
 	photoRoute := route.Group("/photos")
 	{
+		photoRoute.GET("/", photoController.HandleFetchPhoto())
 		photoRoute.Use(authMW.Guard())
 		{
 			photoRoute.POST("/", photoController.HandleCreatePhoto())

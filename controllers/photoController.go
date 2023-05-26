@@ -13,6 +13,7 @@ import (
 
 type IPhotoController interface {
 	HandleCreatePhoto() gin.HandlerFunc
+	HandleFetchPhoto() gin.HandlerFunc
 }
 
 type PhotoController struct {
@@ -27,7 +28,6 @@ func NewPhotoController(model models.IPhotoModel, validator helpers.IValidator) 
 	}
 }
 
-// HandleCreatePhoto implements IPhotoController
 func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -99,6 +99,39 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 				},
 				CreatedAt: newPhoto.CreatedAt,
 				UpdatedAt: newPhoto.UpdatedAt,
+			},
+		})
+	}
+}
+
+func (photoController *PhotoController) HandleFetchPhoto() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		photos, err := photoController.model.GetAllPhoto()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})
+		}
+
+		photosReponse := []*app.PhotoGeneralResponse{}
+
+		for _, photo := range photos {
+			photosReponse = append(photosReponse, &app.PhotoGeneralResponse{
+				ID:        photo.ID,
+				Title:     photo.Title,
+				Caption:   photo.Caption,
+				PhotoUrl:  photo.PhotoUrl,
+				UserID:    photo.UserID,
+				CreatedAt: photo.CreatedAt,
+				UpdatedAt: photo.UpdatedAt,
+			})
+		}
+
+		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
+			Status: "success",
+			Data: gin.H{
+				"photos": photosReponse,
 			},
 		})
 	}

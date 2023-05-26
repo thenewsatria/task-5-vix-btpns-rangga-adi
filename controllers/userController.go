@@ -254,6 +254,9 @@ func (userController *UserController) HandleUpdate() gin.HandlerFunc {
 			photosResponse = append(photosResponse, app.PhotoGeneralResponse{
 				ID:        photo.ID,
 				UserID:    photo.UserID,
+				Title:     photo.Title,
+				Caption:   photo.Caption,
+				PhotoUrl:  photo.PhotoUrl,
 				CreatedAt: photo.CreatedAt,
 				UpdatedAt: photo.UpdatedAt,
 			})
@@ -320,6 +323,9 @@ func (userController *UserController) HandleDelete() gin.HandlerFunc {
 			photosResponse = append(photosResponse, app.PhotoGeneralResponse{
 				ID:        photo.ID,
 				UserID:    photo.UserID,
+				Title:     photo.Title,
+				Caption:   photo.Caption,
+				PhotoUrl:  photo.PhotoUrl,
 				CreatedAt: photo.CreatedAt,
 				UpdatedAt: photo.UpdatedAt,
 			})

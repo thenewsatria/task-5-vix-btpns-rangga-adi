@@ -13,7 +13,7 @@ type Photo struct {
 	Caption   string
 	PhotoUrl  string
 	UserID    uint
-	User      User `gorm:"constrain:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	User      User
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

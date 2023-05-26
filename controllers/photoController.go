@@ -13,6 +13,7 @@ import (
 
 type IPhotoController interface {
 	HandleCreatePhoto() gin.HandlerFunc
+	Handle
 }
 
 type PhotoController struct {
@@ -97,6 +98,8 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 					CreatedAt: photoOwner.CreatedAt,
 					UpdatedAt: photoOwner.UpdatedAt,
 				},
+				CreatedAt: newPhoto.CreatedAt,
+				UpdatedAt: newPhoto.UpdatedAt,
 			},
 		})
 	}

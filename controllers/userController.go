@@ -259,7 +259,7 @@ func (userController *UserController) HandleUpdate() gin.HandlerFunc {
 			})
 		}
 
-		c.JSON(http.StatusCreated, &app.JsendSuccessResponse{
+		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
 			Status: "success",
 			Data: &app.UserDetailGeneralResponse{
 				ID:        updatedUser.ID,
@@ -324,7 +324,7 @@ func (userController *UserController) HandleDelete() gin.HandlerFunc {
 				UpdatedAt: photo.UpdatedAt,
 			})
 		}
-		c.JSON(http.StatusCreated, &app.JsendSuccessResponse{
+		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
 			Status: "success",
 			Data: &app.UserDetailGeneralResponse{
 				ID:        deletedUser.ID,

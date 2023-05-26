@@ -37,6 +37,14 @@ type UserDetailGeneralResponse struct {
 	UpdatedAt time.Time              `json:"updatedAt"`
 }
 
+type UserGeneralResponse struct {
+	ID        uint      `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
 type UserAuthResponse struct {
 	AccessToken string `json:"accessToken"`
 }

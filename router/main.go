@@ -7,4 +7,5 @@ import (
 
 func RouteApp(app *gin.Engine, database database.IDatabase) {
 	UserRouting(app, database)
+	PhotoRouting(app, database)
 }

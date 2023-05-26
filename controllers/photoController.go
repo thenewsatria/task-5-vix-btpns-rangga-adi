@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
@@ -14,6 +15,7 @@ import (
 type IPhotoController interface {
 	HandleCreatePhoto() gin.HandlerFunc
 	HandleFetchPhoto() gin.HandlerFunc
+	HandleUpdatePhoto() gin.HandlerFunc
 }
 
 type PhotoController struct {
@@ -132,6 +134,91 @@ func (photoController *PhotoController) HandleFetchPhoto() gin.HandlerFunc {
 			Status: "success",
 			Data: gin.H{
 				"photos": photosReponse,
+			},
+		})
+	}
+}
+
+// HandleUpdatePhoto implements IPhotoController
+func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		var updateRequest app.PhotoUpdateRequest
+		if err := c.ShouldBindJSON(&updateRequest); err != nil {
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
+				Status: "fail",
+				Data: gin.H{
+					"json": err.Error(),
+				},
+			})
+			return
+		}
+
+		msg, _ := photoController.validator.Validate(updateRequest)
+
+		if len(msg) != 0 {
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
+				Status: "fail",
+				Data:   msg,
+			})
+			return
+		}
+
+		photoId := c.Param("photoId")
+
+		intPhotoId, err := strconv.ParseUint(photoId, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
+				Status: "fail",
+				Data: gin.H{
+					"photo_id": "Invalid photo ID",
+				},
+			})
+			return
+		}
+
+		relatedPhoto, err := photoController.model.GetById(uint(intPhotoId), true)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, &app.JsendFailResponse{
+					Status: "fail",
+					Data: gin.H{
+						"photo": "There's no photo found related with provided photo id",
+					},
+				})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})
+			return
+		}
+
+		updatedPhoto, err := photoController.model.UpdatePhoto(relatedPhoto, &updateRequest)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})
+		}
+
+		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
+			Status: "success",
+			Data: &app.PhotoDetailGeneralReponse{
+				ID:       updatedPhoto.ID,
+				Title:    updatedPhoto.Title,
+				Caption:  updatedPhoto.Caption,
+				PhotoUrl: updatedPhoto.PhotoUrl,
+				Owner: app.UserGeneralResponse{
+					ID:        updatedPhoto.User.ID,
+					Username:  updatedPhoto.User.Username,
+					Email:     updatedPhoto.User.Email,
+					CreatedAt: updatedPhoto.User.CreatedAt,
+					UpdatedAt: updatedPhoto.User.UpdatedAt,
+				},
+				CreatedAt: updatedPhoto.CreatedAt,
+				UpdatedAt: updatedPhoto.UpdatedAt,
 			},
 		})
 	}

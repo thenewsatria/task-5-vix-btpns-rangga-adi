@@ -5,6 +5,7 @@ import (
 
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/database"
+	"gorm.io/gorm"
 )
 
 type Photo struct {
@@ -20,8 +21,10 @@ type Photo struct {
 
 type IPhotoModel interface {
 	CreatePhoto(photo *app.PhotoCreationRequest) (*Photo, error)
-	GetOwner(userId uint) (*User, error)
 	GetAllPhoto() ([]Photo, error)
+	GetOwner(userId uint) (*User, error)
+	GetById(photoId uint, detailed bool) (*Photo, error)
+	UpdatePhoto(photo *Photo, updateBody *app.PhotoUpdateRequest) (*Photo, error)
 }
 
 type PhotoModel struct {
@@ -67,4 +70,35 @@ func (photoModel *PhotoModel) GetAllPhoto() ([]Photo, error) {
 		return nil, result.Error
 	}
 	return photos, nil
+}
+
+func (photoModel *PhotoModel) UpdatePhoto(photo *Photo, updateBody *app.PhotoUpdateRequest) (*Photo, error) {
+	client := photoModel.db.GetClient()
+
+	photo.Title = updateBody.Title
+	photo.Caption = updateBody.Caption
+	photo.PhotoUrl = updateBody.PhotoUrl
+
+	result := client.Save(photo)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return photo, nil
+}
+
+func (photoModel *PhotoModel) GetById(photoId uint, detailed bool) (*Photo, error) {
+	client := photoModel.db.GetClient()
+
+	var photo Photo
+	var result *gorm.DB
+	if detailed {
+		result = client.Preload("User").First(&photo, photoId)
+	} else {
+		result = client.First(&photo, photoId)
+	}
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &photo, nil
 }

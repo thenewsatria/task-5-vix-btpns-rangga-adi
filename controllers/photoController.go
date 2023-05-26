@@ -13,7 +13,6 @@ import (
 
 type IPhotoController interface {
 	HandleCreatePhoto() gin.HandlerFunc
-	Handle
 }
 
 type PhotoController struct {
@@ -90,7 +89,7 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 				ID:       newPhoto.ID,
 				Title:    newPhoto.Title,
 				Caption:  newPhoto.Caption,
-				PhotoUrl: newPhoto.Caption,
+				PhotoUrl: newPhoto.PhotoUrl,
 				Owner: app.UserGeneralResponse{
 					ID:        photoOwner.ID,
 					Username:  photoOwner.Username,

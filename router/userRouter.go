@@ -25,7 +25,7 @@ func UserRouting(route *gin.Engine, db database.IDatabase) {
 		usersRoute.GET("/login", userController.HandleLogin(hasher, webToken))
 		idSubRoute := usersRoute.Group("/:userId")
 		{
-			idSubRoute.Use(authMW.Guard()).Use(authMW.Authorize())
+			idSubRoute.Use(authMW.Guard()).Use(authMW.Authorize(userModel))
 			{
 				idSubRoute.PUT("/", userController.HandleUpdate())
 				idSubRoute.DELETE("/", userController.HandleDelete())

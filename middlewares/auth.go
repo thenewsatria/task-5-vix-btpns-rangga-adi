@@ -16,7 +16,7 @@ import (
 
 type IAuthMiddleware interface {
 	Guard() gin.HandlerFunc
-	Authorize() gin.HandlerFunc
+	Authorize(model interface{}) gin.HandlerFunc
 }
 
 type AuthMiddleware struct {
@@ -80,43 +80,148 @@ func (authMW *AuthMiddleware) Guard() gin.HandlerFunc {
 	}
 }
 
-func (authMW *AuthMiddleware) Authorize() gin.HandlerFunc {
+func (authMW *AuthMiddleware) Authorize(model interface{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		currentUser := c.MustGet("currentUser").(*models.User)
+		var ownerId uint = 0
+		var castingStat bool = true
+		var parseError error = nil
+		var queryError error = nil
+		var errorResource string = "unknown"
+		var parsedId uint64 = 0
 
-		userId := c.Param("userId")
+		switch true {
+		case c.Param("userId") != "":
+			userModel, ok := model.(models.IUserModel)
+			if !ok {
+				errorResource = "user"
+				castingStat = false
+				break
+			}
+			parsedId, parseError = strconv.ParseUint(c.Param("userId"), 10, 32)
+			if parseError != nil {
+				errorResource = "user"
+				break
+			}
 
-		intUserId, err := strconv.ParseUint(userId, 10, 32)
-		if err != nil {
+			requestedUser, queryError := userModel.GetById(uint(parsedId), false)
+			if queryError != nil {
+				errorResource = "user"
+				break
+			}
+			ownerId = requestedUser.ID
+		case c.Param("photoId") != "":
+			photoModel, ok := model.(models.IPhotoModel)
+			if !ok {
+				errorResource = "photo"
+				castingStat = false
+				break
+			}
+			parsedId, parseError = strconv.ParseUint(c.Param("userId"), 10, 32)
+			if parseError != nil {
+				errorResource = "photo"
+				break
+			}
+
+			requestedPhoto, queryError := photoModel.GetById(uint(parsedId), false)
+			if queryError != nil {
+				errorResource = "user"
+				break
+			}
+			ownerId = requestedPhoto.UserID
+			// intPhotoId, err := strconv.ParseUint(photoId, 10, 32)
+			// if err != nil {
+			// 	c.AbortWithStatusJSON(http.StatusBadRequest, &app.JsendFailResponse{
+			// 		Status: "fail",
+			// 		Data: gin.H{
+			// 			"photo_id": "Invalid photo ID",
+			// 		},
+			// 	})
+			// 	return
+			// }
+
+			// photoModel, ok := model.(models.IPhotoModel)
+			// if !ok {
+			// 	c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+			// 		Status:  "error",
+			// 		Message: "There's something wrong when authorizing photo resources",
+			// 	})
+			// }
+
+			// requestedPhoto, err := photoModel.GetById(uint(intPhotoId), false)
+			// if err != nil {
+			// 	if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 		c.AbortWithStatusJSON(http.StatusNotFound, &app.JsendFailResponse{
+			// 			Status: "fail",
+			// 			Data: gin.H{
+			// 				"photo": "There's no photo found related with provided photo id",
+			// 			},
+			// 		})
+			// 		return
+			// 	}
+			// 	c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+			// 		Status:  "error",
+			// 		Message: err.Error(),
+			// 	})
+			// 	return
+			// }
+
+			// if currentUser.ID == requestedPhoto.UserID {
+			// 	c.Next()
+			// } else {
+			// 	c.AbortWithStatusJSON(http.StatusUnauthorized, &app.JsendFailResponse{
+			// 		Status: "fail",
+			// 		Data: gin.H{
+			// 			"message": "Access denied, you are unauthorized to access this resource",
+			// 		},
+			// 	})
+			// 	return
+			// }
+		default:
+			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: "There",
+			})
+			return
+		}
+
+		if !castingStat {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: "There's something wrong in the authorization middleware",
+			})
+			return
+		}
+
+		if parseError != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
-					"user_id": "Invalid user ID",
+					fmt.Sprintf("%s_id", errorResource): fmt.Sprintf("Invalid %s ID", errorResource),
 				},
 			})
 			return
 		}
 
-		requestedUser, err := authMW.userModel.GetById(uint(intUserId), false)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
+		if queryError != nil {
+			if errors.Is(queryError, gorm.ErrRecordNotFound) {
 				c.AbortWithStatusJSON(http.StatusNotFound, &app.JsendFailResponse{
 					Status: "fail",
 					Data: gin.H{
-						"user": "There's no user found related with provided user id",
+						errorResource: fmt.Sprintf("There's no %s found related with provided %s id", errorResource, errorResource),
 					},
 				})
 				return
 			}
 			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
-				Message: err.Error(),
+				Message: queryError.Error(),
 			})
 			return
 		}
 
-		if currentUser.ID == requestedUser.ID {
+		if currentUser.ID == ownerId {
 			c.Next()
 		} else {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, &app.JsendFailResponse{

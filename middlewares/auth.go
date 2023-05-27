@@ -89,7 +89,6 @@ func (authMW *AuthMiddleware) Authorize(model interface{}) gin.HandlerFunc {
 		var parseError error = nil
 		var queryError error = nil
 		var errorResource string = "unknown"
-		var parsedId uint64 = 0
 
 		switch true {
 		case c.Param("userId") != "":
@@ -99,15 +98,17 @@ func (authMW *AuthMiddleware) Authorize(model interface{}) gin.HandlerFunc {
 				castingStat = false
 				break
 			}
-			parsedId, parseError = strconv.ParseUint(c.Param("userId"), 10, 32)
-			if parseError != nil {
+			parsedId, err := strconv.ParseUint(c.Param("userId"), 10, 32)
+			if err != nil {
 				errorResource = "user"
+				parseError = err
 				break
 			}
 
-			requestedUser, queryError := userModel.GetById(uint(parsedId), false)
-			if queryError != nil {
+			requestedUser, err := userModel.GetById(uint(parsedId), false)
+			if err != nil {
 				errorResource = "user"
+				queryError = err
 				break
 			}
 			ownerId = requestedUser.ID
@@ -118,66 +119,20 @@ func (authMW *AuthMiddleware) Authorize(model interface{}) gin.HandlerFunc {
 				castingStat = false
 				break
 			}
-			parsedId, parseError = strconv.ParseUint(c.Param("userId"), 10, 32)
-			if parseError != nil {
+			parsedId, err := strconv.ParseUint(c.Param("photoId"), 10, 32)
+			if err != nil {
 				errorResource = "photo"
+				parseError = err
 				break
 			}
 
-			requestedPhoto, queryError := photoModel.GetById(uint(parsedId), false)
-			if queryError != nil {
-				errorResource = "user"
+			requestedPhoto, err := photoModel.GetById(uint(parsedId), false)
+			if err != nil {
+				errorResource = "photo"
+				queryError = err
 				break
 			}
 			ownerId = requestedPhoto.UserID
-			// intPhotoId, err := strconv.ParseUint(photoId, 10, 32)
-			// if err != nil {
-			// 	c.AbortWithStatusJSON(http.StatusBadRequest, &app.JsendFailResponse{
-			// 		Status: "fail",
-			// 		Data: gin.H{
-			// 			"photo_id": "Invalid photo ID",
-			// 		},
-			// 	})
-			// 	return
-			// }
-
-			// photoModel, ok := model.(models.IPhotoModel)
-			// if !ok {
-			// 	c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
-			// 		Status:  "error",
-			// 		Message: "There's something wrong when authorizing photo resources",
-			// 	})
-			// }
-
-			// requestedPhoto, err := photoModel.GetById(uint(intPhotoId), false)
-			// if err != nil {
-			// 	if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 		c.AbortWithStatusJSON(http.StatusNotFound, &app.JsendFailResponse{
-			// 			Status: "fail",
-			// 			Data: gin.H{
-			// 				"photo": "There's no photo found related with provided photo id",
-			// 			},
-			// 		})
-			// 		return
-			// 	}
-			// 	c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
-			// 		Status:  "error",
-			// 		Message: err.Error(),
-			// 	})
-			// 	return
-			// }
-
-			// if currentUser.ID == requestedPhoto.UserID {
-			// 	c.Next()
-			// } else {
-			// 	c.AbortWithStatusJSON(http.StatusUnauthorized, &app.JsendFailResponse{
-			// 		Status: "fail",
-			// 		Data: gin.H{
-			// 			"message": "Access denied, you are unauthorized to access this resource",
-			// 		},
-			// 	})
-			// 	return
-			// }
 		default:
 			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
@@ -224,6 +179,7 @@ func (authMW *AuthMiddleware) Authorize(model interface{}) gin.HandlerFunc {
 		if currentUser.ID == ownerId {
 			c.Next()
 		} else {
+			fmt.Println(queryError)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{

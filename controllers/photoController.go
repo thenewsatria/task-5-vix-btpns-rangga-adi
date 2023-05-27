@@ -73,7 +73,7 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 					Status: "fail",
 					Data: gin.H{
-						"message": "Can't get owner of the photo, user with related isn't found",
+						"message": "Can't populate owner of the photo, user with related userId is not found",
 					},
 				})
 				return
@@ -180,7 +180,7 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 					Status: "fail",
 					Data: gin.H{
-						"message": "Can't get owner of the photo, user with related isn't found",
+						"message": "Can't populate owner of the photo, user with related userId is not found",
 					},
 				})
 				return
@@ -223,7 +223,7 @@ func (photoController *PhotoController) HandleDeletePhoto() gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 					Status: "fail",
 					Data: gin.H{
-						"message": "Can't get owner of the photo, user with related isn't found",
+						"message": "Can't populate owner of the photo, user with related userId is not found",
 					},
 				})
 				return

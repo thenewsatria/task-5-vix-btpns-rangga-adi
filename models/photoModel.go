@@ -25,6 +25,7 @@ type IPhotoModel interface {
 	GetOwner(userId uint) (*User, error)
 	GetById(photoId uint, detailed bool) (*Photo, error)
 	UpdatePhoto(photo *Photo, updateBody *app.PhotoUpdateRequest) (*Photo, error)
+	DeletePhoto(photo *Photo) (*Photo, error)
 }
 
 type PhotoModel struct {
@@ -101,4 +102,14 @@ func (photoModel *PhotoModel) GetById(photoId uint, detailed bool) (*Photo, erro
 		return nil, result.Error
 	}
 	return &photo, nil
+}
+
+func (photoModel *PhotoModel) DeletePhoto(photo *Photo) (*Photo, error) {
+	client := photoModel.db.GetClient()
+	result := client.Delete(photo)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return photo, nil
 }

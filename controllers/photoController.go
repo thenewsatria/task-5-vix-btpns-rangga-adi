@@ -16,6 +16,7 @@ type IPhotoController interface {
 	HandleCreatePhoto() gin.HandlerFunc
 	HandleFetchPhoto() gin.HandlerFunc
 	HandleUpdatePhoto() gin.HandlerFunc
+	HandleDeletePhoto() gin.HandlerFunc
 }
 
 type PhotoController struct {
@@ -201,6 +202,7 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 				Status:  "error",
 				Message: err.Error(),
 			})
+			return
 		}
 
 		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
@@ -219,6 +221,69 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 				},
 				CreatedAt: updatedPhoto.CreatedAt,
 				UpdatedAt: updatedPhoto.UpdatedAt,
+			},
+		})
+	}
+}
+
+func (photoController *PhotoController) HandleDeletePhoto() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		photoId := c.Param("photoId")
+
+		intPhotoId, err := strconv.ParseUint(photoId, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
+				Status: "fail",
+				Data: gin.H{
+					"photo_id": "Invalid photo ID",
+				},
+			})
+			return
+		}
+
+		relatedPhoto, err := photoController.model.GetById(uint(intPhotoId), true)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, &app.JsendFailResponse{
+					Status: "fail",
+					Data: gin.H{
+						"photo": "There's no photo found related with provided photo id",
+					},
+				})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})
+			return
+		}
+
+		deletedPhoto, err := photoController.model.DeletePhoto(relatedPhoto)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
+			Status: "success",
+			Data: &app.PhotoDetailGeneralReponse{
+				ID:       deletedPhoto.ID,
+				Title:    deletedPhoto.Title,
+				Caption:  deletedPhoto.Caption,
+				PhotoUrl: deletedPhoto.PhotoUrl,
+				Owner: app.UserGeneralResponse{
+					ID:        deletedPhoto.User.ID,
+					Username:  deletedPhoto.User.Username,
+					Email:     deletedPhoto.User.Email,
+					CreatedAt: deletedPhoto.User.CreatedAt,
+					UpdatedAt: deletedPhoto.User.UpdatedAt,
+				},
+				CreatedAt: deletedPhoto.CreatedAt,
+				UpdatedAt: deletedPhoto.UpdatedAt,
 			},
 		})
 	}

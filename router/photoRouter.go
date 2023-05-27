@@ -31,6 +31,7 @@ func PhotoRouting(route *gin.Engine, db database.IDatabase) {
 				idSubRoute.Use(authMW.Authorize(photoModel))
 				{
 					idSubRoute.PUT("/", photoController.HandleUpdatePhoto())
+					idSubRoute.DELETE("/", photoController.HandleDeletePhoto())
 				}
 			}
 		}

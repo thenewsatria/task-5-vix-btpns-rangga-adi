@@ -111,6 +111,9 @@ func (authMW *AuthMiddleware) Authorize(model interface{}) gin.HandlerFunc {
 				queryError = err
 				break
 			}
+
+			c.Set("requestedUser", requestedUser)
+
 			ownerId = requestedUser.ID
 		case c.Param("photoId") != "":
 			photoModel, ok := model.(models.IPhotoModel)
@@ -132,6 +135,9 @@ func (authMW *AuthMiddleware) Authorize(model interface{}) gin.HandlerFunc {
 				queryError = err
 				break
 			}
+
+			c.Set("requestedPhoto", requestedPhoto)
+
 			ownerId = requestedPhoto.UserID
 		default:
 			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{

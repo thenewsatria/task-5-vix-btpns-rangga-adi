@@ -3,7 +3,6 @@ package controllers
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
@@ -187,6 +186,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 
 func (userController *UserController) HandleUpdate() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		relatedUser := c.MustGet("requestedUser").(*models.User)
 
 		var updateRequest app.UserUpdateRequest
 		if err := c.ShouldBindJSON(&updateRequest); err != nil {
@@ -209,26 +209,22 @@ func (userController *UserController) HandleUpdate() gin.HandlerFunc {
 			return
 		}
 
-		userId := c.Param("userId")
-
-		intUserId, err := strconv.ParseUint(userId, 10, 32)
+		updatedUser, err := userController.model.UpdateUser(relatedUser, &updateRequest)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
-				Status: "fail",
-				Data: gin.H{
-					"user_id": "Invalid user ID",
-				},
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "fail",
+				Message: err.Error(),
 			})
 			return
 		}
 
-		relatedUser, err := userController.model.GetById(uint(intUserId), true)
+		populatedUser, err := userController.model.GetById(updatedUser.ID, true)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, &app.JsendFailResponse{
+				c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 					Status: "fail",
 					Data: gin.H{
-						"user": "There's no user found related with provided user id",
+						"message": "User with related id isn't found",
 					},
 				})
 				return
@@ -240,17 +236,8 @@ func (userController *UserController) HandleUpdate() gin.HandlerFunc {
 			return
 		}
 
-		updatedUser, err := userController.model.UpdateUser(relatedUser, &updateRequest)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
-				Status:  "fail",
-				Message: err.Error(),
-			})
-			return
-		}
-
 		photosResponse := []app.PhotoGeneralResponse{}
-		for _, photo := range updatedUser.Photos {
+		for _, photo := range populatedUser.Photos {
 			photosResponse = append(photosResponse, app.PhotoGeneralResponse{
 				ID:        photo.ID,
 				UserID:    photo.UserID,
@@ -278,26 +265,15 @@ func (userController *UserController) HandleUpdate() gin.HandlerFunc {
 
 func (userController *UserController) HandleDelete() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userId := c.Param("userId")
+		relatedUser := c.MustGet("requestedUser").(*models.User)
 
-		intUserId, err := strconv.ParseUint(userId, 10, 32)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
-				Status: "fail",
-				Data: gin.H{
-					"user_id": "Invalid user ID",
-				},
-			})
-			return
-		}
-
-		relatedUser, err := userController.model.GetById(uint(intUserId), true)
+		populatedUser, err := userController.model.GetById(relatedUser.ID, true)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, &app.JsendFailResponse{
+				c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 					Status: "fail",
 					Data: gin.H{
-						"user": "There's no user found related with provided user id",
+						"message": "User with related id isn't found",
 					},
 				})
 				return
@@ -309,7 +285,7 @@ func (userController *UserController) HandleDelete() gin.HandlerFunc {
 			return
 		}
 
-		deletedUser, err := userController.model.DeleteUser(relatedUser)
+		deletedUser, err := userController.model.DeleteUser(populatedUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
@@ -319,7 +295,7 @@ func (userController *UserController) HandleDelete() gin.HandlerFunc {
 		}
 
 		photosResponse := []app.PhotoGeneralResponse{}
-		for _, photo := range deletedUser.Photos {
+		for _, photo := range populatedUser.Photos {
 			photosResponse = append(photosResponse, app.PhotoGeneralResponse{
 				ID:        photo.ID,
 				UserID:    photo.UserID,

@@ -3,7 +3,6 @@ package controllers
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
@@ -143,6 +142,7 @@ func (photoController *PhotoController) HandleFetchPhoto() gin.HandlerFunc {
 // HandleUpdatePhoto implements IPhotoController
 func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		relatedPhoto := c.MustGet("requestedPhoto").(*models.Photo)
 
 		var updateRequest app.PhotoUpdateRequest
 		if err := c.ShouldBindJSON(&updateRequest); err != nil {
@@ -165,30 +165,8 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 			return
 		}
 
-		photoId := c.Param("photoId")
-
-		intPhotoId, err := strconv.ParseUint(photoId, 10, 32)
+		updatedPhoto, err := photoController.model.UpdatePhoto(relatedPhoto, &updateRequest)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
-				Status: "fail",
-				Data: gin.H{
-					"photo_id": "Invalid photo ID",
-				},
-			})
-			return
-		}
-
-		relatedPhoto, err := photoController.model.GetById(uint(intPhotoId), true)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, &app.JsendFailResponse{
-					Status: "fail",
-					Data: gin.H{
-						"photo": "There's no photo found related with provided photo id",
-					},
-				})
-				return
-			}
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
 				Message: err.Error(),
@@ -196,8 +174,17 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 			return
 		}
 
-		updatedPhoto, err := photoController.model.UpdatePhoto(relatedPhoto, &updateRequest)
+		photoOwner, err := photoController.model.GetOwner(updatedPhoto.UserID)
 		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
+					Status: "fail",
+					Data: gin.H{
+						"message": "Can't get owner of the photo, user with related isn't found",
+					},
+				})
+				return
+			}
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
 				Message: err.Error(),
@@ -213,11 +200,11 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 				Caption:  updatedPhoto.Caption,
 				PhotoUrl: updatedPhoto.PhotoUrl,
 				Owner: app.UserGeneralResponse{
-					ID:        updatedPhoto.User.ID,
-					Username:  updatedPhoto.User.Username,
-					Email:     updatedPhoto.User.Email,
-					CreatedAt: updatedPhoto.User.CreatedAt,
-					UpdatedAt: updatedPhoto.User.UpdatedAt,
+					ID:        photoOwner.ID,
+					Username:  photoOwner.Username,
+					Email:     photoOwner.Email,
+					CreatedAt: photoOwner.CreatedAt,
+					UpdatedAt: photoOwner.UpdatedAt,
 				},
 				CreatedAt: updatedPhoto.CreatedAt,
 				UpdatedAt: updatedPhoto.UpdatedAt,
@@ -228,26 +215,15 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 
 func (photoController *PhotoController) HandleDeletePhoto() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		photoId := c.Param("photoId")
+		relatedPhoto := c.MustGet("requestedPhoto").(*models.Photo)
 
-		intPhotoId, err := strconv.ParseUint(photoId, 10, 32)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
-				Status: "fail",
-				Data: gin.H{
-					"photo_id": "Invalid photo ID",
-				},
-			})
-			return
-		}
-
-		relatedPhoto, err := photoController.model.GetById(uint(intPhotoId), true)
+		photoOwner, err := photoController.model.GetOwner(relatedPhoto.UserID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusNotFound, &app.JsendFailResponse{
+				c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 					Status: "fail",
 					Data: gin.H{
-						"photo": "There's no photo found related with provided photo id",
+						"message": "Can't get owner of the photo, user with related isn't found",
 					},
 				})
 				return
@@ -276,11 +252,11 @@ func (photoController *PhotoController) HandleDeletePhoto() gin.HandlerFunc {
 				Caption:  deletedPhoto.Caption,
 				PhotoUrl: deletedPhoto.PhotoUrl,
 				Owner: app.UserGeneralResponse{
-					ID:        deletedPhoto.User.ID,
-					Username:  deletedPhoto.User.Username,
-					Email:     deletedPhoto.User.Email,
-					CreatedAt: deletedPhoto.User.CreatedAt,
-					UpdatedAt: deletedPhoto.User.UpdatedAt,
+					ID:        photoOwner.ID,
+					Username:  photoOwner.Username,
+					Email:     photoOwner.Email,
+					CreatedAt: photoOwner.CreatedAt,
+					UpdatedAt: photoOwner.UpdatedAt,
 				},
 				CreatedAt: deletedPhoto.CreatedAt,
 				UpdatedAt: deletedPhoto.UpdatedAt,

@@ -26,6 +26,7 @@ type IPhotoModel interface {
 	GetOwner(userId uint) (*User, error)
 	GetById(photoId uint, detailed bool) (*Photo, error)
 	UpdatePhoto(photo *Photo, updateBody *app.PhotoUpdateRequest) (*Photo, error)
+	UpdatePhotoForm(photo *Photo, updateBody *app.FormPhotoUpdateRequest) (*Photo, error)
 	DeletePhoto(photo *Photo) (*Photo, error)
 }
 
@@ -91,6 +92,21 @@ func (photoModel *PhotoModel) GetAllPhoto() ([]Photo, error) {
 }
 
 func (photoModel *PhotoModel) UpdatePhoto(photo *Photo, updateBody *app.PhotoUpdateRequest) (*Photo, error) {
+	client := photoModel.db.GetClient()
+
+	photo.Title = updateBody.Title
+	photo.Caption = updateBody.Caption
+	photo.PhotoUrl = updateBody.PhotoUrl
+
+	result := client.Save(photo)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return photo, nil
+}
+
+func (photoModel *PhotoModel) UpdatePhotoForm(photo *Photo, updateBody *app.FormPhotoUpdateRequest) (*Photo, error) {
 	client := photoModel.db.GetClient()
 
 	photo.Title = updateBody.Title

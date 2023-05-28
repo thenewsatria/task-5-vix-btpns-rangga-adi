@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -42,7 +44,7 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
-					"json": "Invalid json format",
+					"form-data": "Invalid form-data format",
 				},
 			})
 			return
@@ -162,19 +164,31 @@ func (photoController *PhotoController) HandleFetchPhoto() gin.HandlerFunc {
 func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		relatedPhoto := c.MustGet("requestedPhoto").(*models.Photo)
+		currentUser := c.MustGet("currentUser").(*models.User)
 
-		var updateRequest app.PhotoUpdateRequest
-		if err := c.ShouldBindJSON(&updateRequest); err != nil {
+		var photoUpdateRequest app.FormPhotoUpdateRequest
+		if err := c.Bind(&photoUpdateRequest); err != nil {
 			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
-					"json": err.Error(),
+					"form-data": "Invalid form-data format",
 				},
 			})
 			return
 		}
 
-		msg, _ := photoController.validator.Validate(updateRequest)
+		photoUpdateRequest.PhotoUrl = relatedPhoto.PhotoUrl
+		strSliceFileLoc := strings.Split(relatedPhoto.PhotoUrl, "/")
+		oldFilename := strSliceFileLoc[len(strSliceFileLoc)-1]
+
+		file, _ := c.FormFile("photo")
+		if file != nil {
+			timeStamp := time.Now().UnixNano()
+			file.Filename = fmt.Sprintf("photos_%d_%d_%s", currentUser.ID, timeStamp, file.Filename)
+			photoUpdateRequest.PhotoUrl = fmt.Sprintf("http://%s/public/%s", c.Request.Host, file.Filename)
+		}
+
+		msg, _ := photoController.validator.Validate(photoUpdateRequest)
 
 		if len(msg) != 0 {
 			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
@@ -184,7 +198,7 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 			return
 		}
 
-		updatedPhoto, err := photoController.model.UpdatePhoto(relatedPhoto, &updateRequest)
+		updatedPhoto, err := photoController.model.UpdatePhotoForm(relatedPhoto, &photoUpdateRequest)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
@@ -209,6 +223,27 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 				Message: err.Error(),
 			})
 			return
+		}
+
+		if file != nil {
+			err = c.SaveUploadedFile(file, fmt.Sprintf("./static/photos/%s", file.Filename))
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+					Status:  "error",
+					Message: err.Error(),
+				})
+				return
+			}
+
+			// // Menghapus file lama
+			err = os.Remove(fmt.Sprintf("./static/photos/%s", oldFilename))
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+					Status:  "error",
+					Message: err.Error(),
+				})
+				return
+			}
 		}
 
 		c.JSON(http.StatusOK, &app.JsendSuccessResponse{

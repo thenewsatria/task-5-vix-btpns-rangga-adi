@@ -6,6 +6,8 @@ import (
 )
 
 func RouteApp(app *gin.Engine, database database.IDatabase) {
+	app.Static("/public", "./static/photos")
+
 	UserRouting(app, database)
 	PhotoRouting(app, database)
 }

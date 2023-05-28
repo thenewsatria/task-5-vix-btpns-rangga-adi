@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
@@ -35,8 +37,8 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 
 		currentUser := c.MustGet("currentUser").(*models.User)
 
-		var photoCreationRequest app.PhotoCreationRequest
-		if err := c.ShouldBindJSON(&photoCreationRequest); err != nil {
+		var photoCreationRequest app.FormPhotoCreation
+		if err := c.Bind(&photoCreationRequest); err != nil {
 			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
@@ -47,6 +49,14 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 		}
 
 		photoCreationRequest.UserID = currentUser.ID
+		photoCreationRequest.PhotoUrl = ""
+
+		file, _ := c.FormFile("photo")
+		if file != nil {
+			timeStamp := time.Now().UnixNano()
+			file.Filename = fmt.Sprintf("photos_%d_%d_%s", currentUser.ID, timeStamp, file.Filename)
+			photoCreationRequest.PhotoUrl = fmt.Sprintf("http://%s/public/%s", c.Request.Host, file.Filename)
+		}
 
 		msg, _ := photoController.validator.Validate(photoCreationRequest)
 
@@ -58,7 +68,7 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 			return
 		}
 
-		newPhoto, err := photoController.model.CreatePhoto(&photoCreationRequest)
+		newPhoto, err := photoController.model.CreatePhotoForm(&photoCreationRequest)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
@@ -78,6 +88,15 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 				})
 				return
 			}
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})
+			return
+		}
+
+		err = c.SaveUploadedFile(file, fmt.Sprintf("./static/photos/%s", file.Filename))
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
 				Message: err.Error(),

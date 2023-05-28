@@ -55,7 +55,6 @@ func (authMW *AuthMiddleware) Guard() gin.HandlerFunc {
 		}
 
 		tokenStr := strings.Split(bearerToken, " ")[1]
-		fmt.Println(tokenStr)
 		claims, err := authMW.webToken.ParseToken(tokenStr)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
@@ -185,7 +184,6 @@ func (authMW *AuthMiddleware) Authorize(model interface{}) gin.HandlerFunc {
 		if currentUser.ID == ownerId {
 			c.Next()
 		} else {
-			fmt.Println(queryError)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{

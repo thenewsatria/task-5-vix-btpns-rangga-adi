@@ -19,6 +19,13 @@ type PhotoCreationRequest struct {
 	UserID   uint   `valid:"required~userId: userId is required"`
 }
 
+type FormPhotoCreation struct {
+	Title    string `form:"title" valid:"required~title: title is required"`
+	Caption  string `form:"caption" valid:"required~caption: caption is required"`
+	PhotoUrl string `valid:"required~photoUrl: photo is required please upload a photo"`
+	UserID   uint   `valid:"required~userId: userId is required"`
+}
+
 type PhotoUpdateRequest struct {
 	Title    string `json:"title" valid:"required~title: title is required"`
 	Caption  string `json:"caption" valid:"required~caption: caption is required"`

@@ -2,7 +2,10 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/app"
@@ -296,6 +299,19 @@ func (userController *UserController) HandleDelete() gin.HandlerFunc {
 
 		photosResponse := []app.PhotoGeneralResponse{}
 		for _, photo := range populatedUser.Photos {
+
+			// deleting every related photo files.
+			strSliceFileLoc := strings.Split(photo.PhotoUrl, "/")
+			oldFilename := strSliceFileLoc[len(strSliceFileLoc)-1]
+			err = os.Remove(fmt.Sprintf("./static/photos/%s", oldFilename))
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+					Status:  "error",
+					Message: err.Error(),
+				})
+				return
+			}
+
 			photosResponse = append(photosResponse, app.PhotoGeneralResponse{
 				ID:        photo.ID,
 				UserID:    photo.UserID,

@@ -20,7 +20,6 @@ func PhotoRouting(route *gin.Engine, db database.IDatabase) {
 	photoController := controllers.NewPhotoController(photoModel, validator)
 	authMW := middlewares.NewAuthMiddleware(userModel, webToken)
 	fileUploadMW := middlewares.NewFileUploadMiddleware()
-
 	photoRoute := route.Group("/photos")
 	{
 		photoRoute.GET("/", photoController.HandleFetchPhoto())

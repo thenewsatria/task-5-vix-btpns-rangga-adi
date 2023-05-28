@@ -44,7 +44,7 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
-					"form-data": "Invalid form-data format",
+					"form-data": err.Error(),
 				},
 			})
 			return
@@ -171,7 +171,7 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
 				Data: gin.H{
-					"form-data": "Invalid form-data format",
+					"form-test": err.Error(),
 				},
 			})
 			return

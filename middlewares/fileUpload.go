@@ -25,17 +25,7 @@ func NewFileUploadMiddleware() IFileUploadMiddleware {
 // AllowedExt implements IFileUploadMiddleware
 func (fileUploadMW *FileUploadMiddleware) AllowedExtension(formName string, fileExtensions ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		file, err := c.FormFile(formName)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
-				Status:  "fail",
-				Message: err.Error(),
-			})
-			return
-		}
-		if file != nil {
-			fmt.Println(file.Filename)
-		}
+		file, _ := c.FormFile(formName)
 		if file == nil {
 			c.Next()
 			return
@@ -61,22 +51,15 @@ func (fileUploadMW *FileUploadMiddleware) AllowedExtension(formName string, file
 // AllowMaxSizeKb implements IFileUploadMiddleware
 func (fileUploadMW *FileUploadMiddleware) AllowMaxSizeKB(formName string, maxSizeKB uint64) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Println("masuk checksize")
 		file, _ := c.FormFile(formName)
-		if file != nil {
-			fmt.Println(file.Filename)
-		}
 		if file == nil {
-			fmt.Println("file is nil")
 			c.Next()
 			return
 		} else {
 			if file.Size <= int64(maxSizeKB)*1024 {
-				fmt.Println("masuk bos 123123")
 				c.Next()
 				return
 			} else {
-				fmt.Println("masuk bos")
 				c.AbortWithStatusJSON(http.StatusBadRequest, &app.JsendFailResponse{
 					Status: "fail",
 					Data: gin.H{

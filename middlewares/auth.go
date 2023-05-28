@@ -183,6 +183,7 @@ func (authMW *AuthMiddleware) Authorize(model interface{}) gin.HandlerFunc {
 
 		if currentUser.ID == ownerId {
 			c.Next()
+			return
 		} else {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, &app.JsendFailResponse{
 				Status: "fail",

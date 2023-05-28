@@ -19,17 +19,22 @@ func PhotoRouting(route *gin.Engine, db database.IDatabase) {
 
 	photoController := controllers.NewPhotoController(photoModel, validator)
 	authMW := middlewares.NewAuthMiddleware(userModel, webToken)
+	fileUploadMW := middlewares.NewFileUploadMiddleware()
 
 	photoRoute := route.Group("/photos")
 	{
 		photoRoute.GET("/", photoController.HandleFetchPhoto())
 		photoRoute.Use(authMW.Guard())
 		{
-			photoRoute.POST("/", photoController.HandleCreatePhoto())
+
+			photoRoute.POST("/", fileUploadMW.AllowMaxSizeKB("photo", 2*1024), fileUploadMW.AllowedExtension("photo", ".jpeg", ".jpg", ".png"),
+				photoController.HandleCreatePhoto())
 			idSubRoute := photoRoute.Group("/:photoId")
 			{
 				idSubRoute.Use(authMW.Authorize(photoModel))
 				{
+					// idSubRoute.PUT("/", fileUploadMW.AllowMaxSizeKB("photo", 2*1024), fileUploadMW.AllowedExtension("photo", ".jpeg", ".jpg", ".png"),
+					// 	photoController.HandleUpdatePhoto())
 					idSubRoute.PUT("/", photoController.HandleUpdatePhoto())
 					idSubRoute.DELETE("/", photoController.HandleDeletePhoto())
 				}

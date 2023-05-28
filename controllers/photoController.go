@@ -298,6 +298,18 @@ func (photoController *PhotoController) HandleDeletePhoto() gin.HandlerFunc {
 			return
 		}
 
+		// // Menghapus file lama
+		strSliceFileLoc := strings.Split(deletedPhoto.PhotoUrl, "/")
+		oldFilename := strSliceFileLoc[len(strSliceFileLoc)-1]
+		err = os.Remove(fmt.Sprintf("./static/photos/%s", oldFilename))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})
+			return
+		}
+
 		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
 			Status: "success",
 			Data: &app.PhotoDetailGeneralReponse{

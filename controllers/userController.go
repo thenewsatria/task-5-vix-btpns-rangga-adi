@@ -87,7 +87,8 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			return
 		}
 		registerRequest.Password = hashedPassword
-		accessToken, err := webToken.GenerateAccessToken(registerRequest.Email)
+
+		newUser, err := userController.model.CreateUser(&registerRequest)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
@@ -95,7 +96,9 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			})
 			return
 		}
-		if _, err = userController.model.CreateUser(&registerRequest); err != nil {
+
+		accessToken, err := webToken.GenerateAccessToken(newUser.ID)
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
 				Message: err.Error(),
@@ -169,7 +172,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 			return
 		}
 
-		accessToken, err := webToken.GenerateAccessToken(currentUser.Email)
+		accessToken, err := webToken.GenerateAccessToken(currentUser.ID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",

@@ -64,7 +64,7 @@ func (authMW *AuthMiddleware) Guard() gin.HandlerFunc {
 			return
 		}
 
-		currentUser, err := authMW.userModel.GetByEmail(claims.Email, false)
+		currentUser, err := authMW.userModel.GetById(claims.ID, false)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusNotFound, &app.JsendFailResponse{
 				Status: "fail",

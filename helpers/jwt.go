@@ -10,14 +10,14 @@ import (
 )
 
 type IWebToken interface {
-	GenerateAccessToken(email string) (string, error)
+	GenerateAccessToken(userId uint) (string, error)
 	ParseToken(tokenStr string) (*UserClaims, error)
 }
 
 type WebToken struct{}
 
 type UserClaims struct {
-	Email string
+	ID uint
 	jwt.RegisteredClaims
 }
 
@@ -25,7 +25,7 @@ func NewWebToken() IWebToken {
 	return &WebToken{}
 }
 
-func (wt *WebToken) GenerateAccessToken(email string) (string, error) {
+func (wt *WebToken) GenerateAccessToken(userId uint) (string, error) {
 	expTime, err := strconv.Atoi(os.Getenv("JWT_EXPIRATION"))
 	if err != nil {
 		return "", nil
@@ -33,7 +33,7 @@ func (wt *WebToken) GenerateAccessToken(email string) (string, error) {
 	tokenSecret := os.Getenv("JWT_SECRET")
 	expirationTime := time.Now().Add(time.Duration(expTime) * time.Minute)
 	claims := &UserClaims{
-		Email: email,
+		ID: userId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},

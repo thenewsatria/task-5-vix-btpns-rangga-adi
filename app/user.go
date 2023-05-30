@@ -25,7 +25,11 @@ type UserLoginRequest struct {
 }
 
 type UserUpdateRequest struct {
-	Username string `json:"username" valid:"required~username: username is required"`
+	Username        string `json:"username" valid:"required~username: username is required"`
+	Email           string `json:"email" valid:"email,required~email: email is required"`
+	OldPassword     string `json:"oldPassword" valid:"required~oldPassword: old password password is required"`
+	NewPassword     string `json:"newPassword" valid:"required~newPassword: new password is required,minstringlength(6)~newPassword: new password must be at least 6 characters"`
+	ConfirmPassword string `json:"confirmPassword" valid:"required~confirmPassword: confirm password is required"`
 }
 
 type UserDetailGeneralResponse struct {

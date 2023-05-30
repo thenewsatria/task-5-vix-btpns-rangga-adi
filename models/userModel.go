@@ -85,6 +85,8 @@ func (userModel *UserModel) UpdateUser(user *User, updateBody *app.UserUpdateReq
 	client := userModel.db.GetClient()
 
 	user.Username = updateBody.Username
+	user.Email = updateBody.Email
+	user.Password = updateBody.NewPassword
 
 	result := client.Save(user)
 

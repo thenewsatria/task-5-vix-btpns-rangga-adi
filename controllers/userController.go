@@ -17,7 +17,7 @@ import (
 type IUserController interface {
 	HandleRegister(hasher helpers.IHasher, webToken helpers.IWebToken) gin.HandlerFunc
 	HandleLogin(hasher helpers.IHasher, webToken helpers.IWebToken) gin.HandlerFunc
-	HandleUpdate() gin.HandlerFunc
+	HandleUpdate(hasher helpers.IHasher) gin.HandlerFunc
 	HandleDelete() gin.HandlerFunc
 }
 
@@ -78,6 +78,7 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			})
 			return
 		}
+
 		hashedPassword, err := hasher.HashString(registerRequest.Password)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
@@ -190,7 +191,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 	}
 }
 
-func (userController *UserController) HandleUpdate() gin.HandlerFunc {
+func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		relatedUser := c.MustGet("requestedUser").(*models.User)
 
@@ -207,6 +208,10 @@ func (userController *UserController) HandleUpdate() gin.HandlerFunc {
 
 		msg, _ := userController.validator.Validate(updateRequest)
 
+		if updateRequest.NewPassword != updateRequest.ConfirmPassword {
+			msg["confirmPassword"] = "password must be matched with the new one"
+		}
+
 		if len(msg) != 0 {
 			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
 				Status: "fail",
@@ -214,6 +219,40 @@ func (userController *UserController) HandleUpdate() gin.HandlerFunc {
 			})
 			return
 		}
+
+		if !hasher.CheckHash(relatedUser.Password, updateRequest.OldPassword) {
+			c.JSON(http.StatusUnauthorized, &app.JsendFailResponse{
+				Status: "fail",
+				Data: gin.H{
+					"oldPassword": "old password doesn't match the current password.",
+				},
+			})
+			return
+		}
+
+		emailOwner, _ := userController.model.GetByEmail(updateRequest.Email, false)
+		if emailOwner != nil {
+			if emailOwner.Email != relatedUser.Email {
+				c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
+					Status: "fail",
+					Data: gin.H{
+						"email": "Email is already taken",
+					},
+				})
+				return
+			}
+		}
+
+		hashedPassword, err := hasher.HashString(updateRequest.NewPassword)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})
+			return
+		}
+
+		updateRequest.NewPassword = hashedPassword
 
 		updatedUser, err := userController.model.UpdateUser(relatedUser, &updateRequest)
 		if err != nil {

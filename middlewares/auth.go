@@ -160,7 +160,7 @@ func (authMW *AuthMiddleware) Authorize(model interface{}) gin.HandlerFunc {
 		default:
 			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
-				Message: "There",
+				Message: "There is something wrong in the authorization middleware",
 			})
 			return
 		}

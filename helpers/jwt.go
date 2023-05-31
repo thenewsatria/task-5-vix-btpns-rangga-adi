@@ -2,36 +2,35 @@ package helpers
 
 import (
 	"errors"
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type IWebToken interface {
-	GenerateAccessToken(userId uint) (string, error)
+	GenerateToken(userId uint) (string, error)
 	ParseToken(tokenStr string) (*UserClaims, error)
 }
 
-type WebToken struct{}
+type WebToken struct {
+	expirationTimeInMinute int
+	tokenSecret            string
+}
 
 type UserClaims struct {
 	ID uint
 	jwt.RegisteredClaims
 }
 
-func NewWebToken() IWebToken {
-	return &WebToken{}
+func NewWebToken(expirationTimeInMinute int, tokenSecret string) IWebToken {
+	return &WebToken{
+		expirationTimeInMinute: expirationTimeInMinute,
+		tokenSecret:            tokenSecret,
+	}
 }
 
-func (wt *WebToken) GenerateAccessToken(userId uint) (string, error) {
-	expTime, err := strconv.Atoi(os.Getenv("JWT_EXPIRATION"))
-	if err != nil {
-		return "", nil
-	}
-	tokenSecret := os.Getenv("JWT_SECRET")
-	expirationTime := time.Now().Add(time.Duration(expTime) * time.Minute)
+func (wt *WebToken) GenerateToken(userId uint) (string, error) {
+	expirationTime := time.Now().Add(time.Duration(wt.expirationTimeInMinute) * time.Minute)
 	claims := &UserClaims{
 		ID: userId,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -39,7 +38,7 @@ func (wt *WebToken) GenerateAccessToken(userId uint) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(tokenSecret))
+	tokenString, err := token.SignedString([]byte(wt.tokenSecret))
 	if err != nil {
 		return "", err
 	}
@@ -47,11 +46,10 @@ func (wt *WebToken) GenerateAccessToken(userId uint) (string, error) {
 }
 
 func (wt *WebToken) ParseToken(tokenStr string) (*UserClaims, error) {
-	tokenSecret := os.Getenv("JWT_SECRET")
 	claims := &UserClaims{}
 
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(tkn *jwt.Token) (interface{}, error) {
-		return []byte(tokenSecret), nil
+		return []byte(wt.tokenSecret), nil
 	})
 	if err != nil {
 		return nil, err

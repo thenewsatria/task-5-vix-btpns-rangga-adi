@@ -20,13 +20,11 @@ type Photo struct {
 }
 
 type IPhotoModel interface {
-	CreatePhoto(photo *app.PhotoCreationRequest) (*Photo, error)
-	CreatePhotoForm(photo *app.FormPhotoCreation) (*Photo, error)
+	CreatePhoto(photo *app.FormPhotoCreationRequest) (*Photo, error)
 	GetAllPhoto() ([]Photo, error)
 	GetOwner(userId uint) (*User, error)
 	GetById(photoId uint, detailed bool) (*Photo, error)
-	UpdatePhoto(photo *Photo, updateBody *app.PhotoUpdateRequest) (*Photo, error)
-	UpdatePhotoForm(photo *Photo, updateBody *app.FormPhotoUpdateRequest) (*Photo, error)
+	UpdatePhoto(photo *Photo, updateBody *app.FormPhotoUpdateRequest) (*Photo, error)
 	DeletePhoto(photo *Photo) (*Photo, error)
 }
 
@@ -40,8 +38,8 @@ func NewPhotoModel(db database.IDatabase) IPhotoModel {
 	}
 }
 
-func (photoModel *PhotoModel) CreatePhoto(photo *app.PhotoCreationRequest) (*Photo, error) {
-	newPhoto := Photo{
+func (photoModel *PhotoModel) CreatePhoto(photo *app.FormPhotoCreationRequest) (*Photo, error) {
+	newPhoto := &Photo{
 		Title:    photo.Title,
 		Caption:  photo.Caption,
 		PhotoUrl: photo.PhotoUrl,
@@ -53,33 +51,17 @@ func (photoModel *PhotoModel) CreatePhoto(photo *app.PhotoCreationRequest) (*Pho
 		return nil, result.Error
 	}
 
-	return &newPhoto, nil
-}
-
-func (photoModel *PhotoModel) CreatePhotoForm(photo *app.FormPhotoCreation) (*Photo, error) {
-	newPhoto := Photo{
-		Title:    photo.Title,
-		Caption:  photo.Caption,
-		PhotoUrl: photo.PhotoUrl,
-		UserID:   photo.UserID,
-	}
-
-	result := photoModel.db.GetClient().Create(&newPhoto)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return &newPhoto, nil
+	return newPhoto, nil
 }
 
 func (photoModel *PhotoModel) GetOwner(userId uint) (*User, error) {
 	client := photoModel.db.GetClient()
-	var owner User
+	owner := &User{}
 	result := client.First(&owner, userId)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return &owner, nil
+	return owner, nil
 }
 
 func (photoModel *PhotoModel) GetAllPhoto() ([]Photo, error) {
@@ -91,22 +73,7 @@ func (photoModel *PhotoModel) GetAllPhoto() ([]Photo, error) {
 	return photos, nil
 }
 
-func (photoModel *PhotoModel) UpdatePhoto(photo *Photo, updateBody *app.PhotoUpdateRequest) (*Photo, error) {
-	client := photoModel.db.GetClient()
-
-	photo.Title = updateBody.Title
-	photo.Caption = updateBody.Caption
-	photo.PhotoUrl = updateBody.PhotoUrl
-
-	result := client.Save(photo)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return photo, nil
-}
-
-func (photoModel *PhotoModel) UpdatePhotoForm(photo *Photo, updateBody *app.FormPhotoUpdateRequest) (*Photo, error) {
+func (photoModel *PhotoModel) UpdatePhoto(photo *Photo, updateBody *app.FormPhotoUpdateRequest) (*Photo, error) {
 	client := photoModel.db.GetClient()
 
 	photo.Title = updateBody.Title
@@ -124,7 +91,7 @@ func (photoModel *PhotoModel) UpdatePhotoForm(photo *Photo, updateBody *app.Form
 func (photoModel *PhotoModel) GetById(photoId uint, detailed bool) (*Photo, error) {
 	client := photoModel.db.GetClient()
 
-	var photo Photo
+	photo := &Photo{}
 	var result *gorm.DB
 	if detailed {
 		result = client.Preload("User").First(&photo, photoId)
@@ -134,7 +101,7 @@ func (photoModel *PhotoModel) GetById(photoId uint, detailed bool) (*Photo, erro
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return &photo, nil
+	return photo, nil
 }
 
 func (photoModel *PhotoModel) DeletePhoto(photo *Photo) (*Photo, error) {

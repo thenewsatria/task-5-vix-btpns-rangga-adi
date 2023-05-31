@@ -1,6 +1,10 @@
 package router
 
 import (
+	"log"
+	"os"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/controllers"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/database"
@@ -15,14 +19,19 @@ func PhotoRouting(route *gin.Engine, db database.IDatabase) {
 
 	validator := helpers.NewValidator()
 
-	webToken := helpers.NewWebToken()
+	expTime, err := strconv.Atoi(os.Getenv("JWT_EXPIRATION"))
+	if err != nil {
+		log.Fatal("Error reading token expiration value from .env file")
+	}
+
+	webToken := helpers.NewWebToken(expTime, os.Getenv("JWT_SECRET"))
 
 	photoController := controllers.NewPhotoController(photoModel, validator)
 	authMW := middlewares.NewAuthMiddleware(userModel, webToken)
 	fileUploadMW := middlewares.NewFileUploadMiddleware()
 	photoRoute := route.Group("/photos")
 	{
-		photoRoute.GET("/", photoController.HandleFetchPhoto())
+		photoRoute.GET("/", photoController.HandleFetchPhotos())
 		photoRoute.Use(authMW.Guard())
 		{
 

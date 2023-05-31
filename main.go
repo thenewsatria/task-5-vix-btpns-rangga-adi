@@ -17,7 +17,6 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	app := gin.Default()
-	app.MaxMultipartMemory = 128 << 20
 	db, err := database.CreateMySQLDB(
 		os.Getenv("DB_UNAME"),
 		os.Getenv("DB_PASSWD"),

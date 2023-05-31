@@ -37,7 +37,7 @@ func NewUserModel(db database.IDatabase) IUserModel {
 }
 
 func (userModel *UserModel) CreateUser(u *app.UserRegisterRequest) (*User, error) {
-	newUser := User{
+	newUser := &User{
 		Username: u.Username,
 		Email:    u.Email,
 		Password: u.Password,
@@ -48,37 +48,37 @@ func (userModel *UserModel) CreateUser(u *app.UserRegisterRequest) (*User, error
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return &newUser, nil
+	return newUser, nil
 }
 
 func (userModel *UserModel) GetByEmail(userEmail string, detailed bool) (*User, error) {
 	client := userModel.db.GetClient()
-	var user User
+	user := &User{}
 	var result *gorm.DB
 	if detailed {
-		result = client.Where("email = ?", userEmail).Preload("Photos").First(&user)
+		result = client.Where("email = ?", userEmail).Preload("Photos").First(user)
 	} else {
-		result = client.Where("email = ?", userEmail).First(&user)
+		result = client.Where("email = ?", userEmail).First(user)
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return &user, nil
+	return user, nil
 }
 
 func (userModel *UserModel) GetById(userId uint, detailed bool) (*User, error) {
 	client := userModel.db.GetClient()
-	var user User
+	user := &User{}
 	var result *gorm.DB
 	if detailed {
-		result = client.Preload("Photos").First(&user, userId)
+		result = client.Preload("Photos").First(user, userId)
 	} else {
-		result = client.First(&user, userId)
+		result = client.First(user, userId)
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return &user, nil
+	return user, nil
 }
 
 func (userModel *UserModel) UpdateUser(user *User, updateBody *app.UserUpdateRequest) (*User, error) {

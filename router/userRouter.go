@@ -1,6 +1,10 @@
 package router
 
 import (
+	"log"
+	"os"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/controllers"
 	"github.com/thenewsatria/task-5-vix-btpns-rangga-adi/database"
@@ -16,7 +20,13 @@ func UserRouting(route *gin.Engine, db database.IDatabase) {
 	userController := controllers.NewUserController(userModel, validator)
 
 	hasher := helpers.NewHasher()
-	webToken := helpers.NewWebToken()
+
+	expTime, err := strconv.Atoi(os.Getenv("JWT_EXPIRATION"))
+	if err != nil {
+		log.Fatal("Error reading token expiration value from .env file")
+	}
+
+	webToken := helpers.NewWebToken(expTime, os.Getenv("JWT_SECRET"))
 	authMW := middlewares.NewAuthMiddleware(userModel, webToken)
 
 	usersRoute := route.Group("/users")

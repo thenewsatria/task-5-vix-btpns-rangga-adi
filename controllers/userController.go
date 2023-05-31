@@ -39,8 +39,8 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 		// [x] Memvalidasi request berupa json
 		// [x] Memvalidasi apakah email atau attribut unik lain telah terpakai
 		// [x] Melakukan hash pada password
-		// [x] Membuat access token
 		// [x] Menyimpan user pada database
+		// [x] Membuat access token dengan id user yang telah masuk pada database
 		// [x] Mengembalikan respon berupa access token
 
 		var registerRequest app.UserRegisterRequest
@@ -54,6 +54,7 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			return
 		}
 
+		// Memvalidasi request yang masuk (username, email, password, dsb)
 		msg, _ := userController.validator.Validate(registerRequest)
 
 		if registerRequest.Password != registerRequest.ConfirmPassword {
@@ -68,6 +69,7 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			return
 		}
 
+		// Mengecek email apakah sudah digunakan oleh user lain atau tidak
 		relatedUser, _ := userController.model.GetByEmail(registerRequest.Email, false)
 		if relatedUser != nil {
 			c.JSON(http.StatusBadRequest, &app.JsendFailResponse{
@@ -79,6 +81,7 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			return
 		}
 
+		// melakukan hashing pada password
 		hashedPassword, err := hasher.HashString(registerRequest.Password)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
@@ -87,8 +90,10 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			})
 			return
 		}
+
 		registerRequest.Password = hashedPassword
 
+		// Membuat user baru pada database sesuai dengan request user
 		newUser, err := userController.model.CreateUser(&registerRequest)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
@@ -98,7 +103,8 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			return
 		}
 
-		accessToken, err := webToken.GenerateAccessToken(newUser.ID)
+		// Membuat access token dengan informasi berupa id dari user yang telah dibuat
+		accessToken, err := webToken.GenerateToken(newUser.ID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
@@ -106,6 +112,8 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 			})
 			return
 		}
+
+		// Mengembalikan response berupa json berisi akses token kembali ke client
 		c.JSON(http.StatusCreated, &app.JsendSuccessResponse{
 			Status: "success",
 			Data: &app.UserAuthResponse{
@@ -118,9 +126,9 @@ func (userController *UserController) HandleRegister(hasher helpers.IHasher, web
 func (userController *UserController) HandleLogin(hasher helpers.IHasher, webToken helpers.IWebToken) gin.HandlerFunc {
 	// NOTE: Langkah Kasus Penggunaan User Register
 	// [x] Memvalidasi request berupa json
-	// [x] Mengambil user terkait dengan email
-	// [x] Melakukan komparasi pada password user saat ini dan password dari input pengguna
-	// [x] Membuat access token baru
+	// [x] Mengambil user terkait dengan email yang diperoleh dari request
+	// [x] Melakukan komparasi pada password user saat ini dan password dari request
+	// [x] Membuat access token baru dengan informasi berupa id dari user saat ini
 	// [x] Mengembalikan respon berupa access token
 
 	return func(c *gin.Context) {
@@ -135,6 +143,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 			return
 		}
 
+		// Memvalidasi request json
 		msg, _ := userController.validator.Validate(loginRequest)
 
 		if len(msg) != 0 {
@@ -145,6 +154,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 			return
 		}
 
+		// Mengambil user terkait dengan email yang diperoleh dari request
 		currentUser, err := userController.model.GetByEmail(loginRequest.Email, false)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -163,6 +173,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 			return
 		}
 
+		// Melakukan pengecekan password user saat ini (terhash) dengan password dari request (plaintext)
 		if !hasher.CheckHash(currentUser.Password, loginRequest.Password) {
 			c.JSON(http.StatusUnauthorized, &app.JsendFailResponse{
 				Status: "fail",
@@ -173,7 +184,8 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 			return
 		}
 
-		accessToken, err := webToken.GenerateAccessToken(currentUser.ID)
+		// membentuk akses token dengan informasi berupa Id dari pengguna saat ini
+		accessToken, err := webToken.GenerateToken(currentUser.ID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
 				Status:  "error",
@@ -182,6 +194,7 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 			return
 		}
 
+		// mengambalikan response berupa akses token kembali ke client
 		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
 			Status: "success",
 			Data: &app.UserAuthResponse{
@@ -193,6 +206,18 @@ func (userController *UserController) HandleLogin(hasher helpers.IHasher, webTok
 
 func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// NOTE: Langkah Kasus Penggunaan User Update
+		// [x] Memperoleh user dengan informasi token dari middleware
+		// [x] Memvalidasi request json
+		// [x] Melakukan pengecekan antara password user saat ini dengan password lama yang dimasukan oleh user
+		// [x] Melakukan pengecekan email baru yang dimasukan oleh user
+		// [x] Melakukan hashing pada password baru yang dimasukan oleh user
+		// [x] Mengupdate user pada database
+		// [x] Mengambil informasi tentang photo yang yang terkait dengan user yang diupdate.
+		// [x] Membentuk response dari setiap photo yang terkait dengan user yang diupdate.
+		// [x] Mengirimkan response kembali ke client.
+
+		// Memperoleh user dari auth middleware
 		relatedUser := c.MustGet("requestedUser").(*models.User)
 
 		var updateRequest app.UserUpdateRequest
@@ -206,6 +231,7 @@ func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.H
 			return
 		}
 
+		// Memvalidasi request json dari user
 		msg, _ := userController.validator.Validate(updateRequest)
 
 		if updateRequest.NewPassword != updateRequest.ConfirmPassword {
@@ -220,6 +246,7 @@ func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.H
 			return
 		}
 
+		// Melakukan pengecekan antara password user saat ini dengan password lama yang dimasukan oleh user
 		if !hasher.CheckHash(relatedUser.Password, updateRequest.OldPassword) {
 			c.JSON(http.StatusUnauthorized, &app.JsendFailResponse{
 				Status: "fail",
@@ -230,6 +257,8 @@ func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.H
 			return
 		}
 
+		// Melakukan pengecekan email apakah email baru yang dimasukan telah digunakan,
+		// Namun apabila email user saat ini sama dengan email yang ada pada request maka proses akan dilanjutkan
 		emailOwner, _ := userController.model.GetByEmail(updateRequest.Email, false)
 		if emailOwner != nil {
 			if emailOwner.Email != relatedUser.Email {
@@ -243,6 +272,7 @@ func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.H
 			}
 		}
 
+		// Melakukan hashing pada password baru dari request
 		hashedPassword, err := hasher.HashString(updateRequest.NewPassword)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
@@ -254,6 +284,7 @@ func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.H
 
 		updateRequest.NewPassword = hashedPassword
 
+		// Melakukan update pada user saat ini dengan informasi sesuai pada request
 		updatedUser, err := userController.model.UpdateUser(relatedUser, &updateRequest)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
@@ -263,6 +294,7 @@ func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.H
 			return
 		}
 
+		// mengambil seluruh photo yang terkait dengan user saat ini.
 		populatedUser, err := userController.model.GetById(updatedUser.ID, true)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -281,6 +313,7 @@ func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.H
 			return
 		}
 
+		// membentuk response untuk setiap photo yang ditemukan
 		photosResponse := []app.PhotoGeneralResponse{}
 		for _, photo := range populatedUser.Photos {
 			photosResponse = append(photosResponse, app.PhotoGeneralResponse{
@@ -294,13 +327,14 @@ func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.H
 			})
 		}
 
+		// Mengirimkan response kembali ke client
 		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
 			Status: "success",
 			Data: &app.UserDetailGeneralResponse{
 				ID:        updatedUser.ID,
 				Username:  updatedUser.Username,
 				Email:     updatedUser.Email,
-				Photos:    photosResponse,
+				Photos:    &photosResponse,
 				CreatedAt: updatedUser.CreatedAt,
 				UpdatedAt: updatedUser.UpdatedAt,
 			},
@@ -310,8 +344,19 @@ func (userController *UserController) HandleUpdate(hasher helpers.IHasher) gin.H
 
 func (userController *UserController) HandleDelete() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// NOTE: Langkah Kasus Penggunaan User Delete
+		// [x] Memperoleh user dengan informasi token dari middleware
+		// [x] Mengambil informasi tentang photo yang yang terkait dengan user yang akan dihapus.
+		// [x] Menghapus user terkait
+		// [x] Menghapus setiap file photo yang terkait dengan user saat ini.
+		// [x] Membentuk response dari setiap photo yang terkait dengan user yang dihapus.
+		// [x] Mengirimkan response kembali ke client.
+
+		// Memperoleh user dari token pada auth middleware
 		relatedUser := c.MustGet("requestedUser").(*models.User)
 
+		// Mengambil user dari database dan juga relasinya dengan photo dengan id dari user
+		// yang diperoleh dari middleware
 		populatedUser, err := userController.model.GetById(relatedUser.ID, true)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -330,6 +375,7 @@ func (userController *UserController) HandleDelete() gin.HandlerFunc {
 			return
 		}
 
+		// Menghapus user yang diperoleh dari database
 		deletedUser, err := userController.model.DeleteUser(populatedUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &app.JsendErrorResponse{
@@ -339,10 +385,11 @@ func (userController *UserController) HandleDelete() gin.HandlerFunc {
 			return
 		}
 
+		// Menghapus setiap photo yang berkaitan dengan user yang dihapus
 		photosResponse := []app.PhotoGeneralResponse{}
 		for _, photo := range populatedUser.Photos {
 
-			// deleting every related photo files.
+			// menghapus setiap file photo yang berkaitan dengan user yang dihapus
 			strSliceFileLoc := strings.Split(photo.PhotoUrl, "/")
 			oldFilename := strSliceFileLoc[len(strSliceFileLoc)-1]
 			err = os.Remove(fmt.Sprintf("./static/photos/%s", oldFilename))
@@ -354,6 +401,7 @@ func (userController *UserController) HandleDelete() gin.HandlerFunc {
 				return
 			}
 
+			// Membentuk response dari setiap photo yang telah dihapus dari database.
 			photosResponse = append(photosResponse, app.PhotoGeneralResponse{
 				ID:        photo.ID,
 				UserID:    photo.UserID,
@@ -364,13 +412,15 @@ func (userController *UserController) HandleDelete() gin.HandlerFunc {
 				UpdatedAt: photo.UpdatedAt,
 			})
 		}
+
+		// Mengembalikan response kembali ke client
 		c.JSON(http.StatusOK, &app.JsendSuccessResponse{
 			Status: "success",
 			Data: &app.UserDetailGeneralResponse{
 				ID:        deletedUser.ID,
 				Username:  deletedUser.Username,
 				Email:     deletedUser.Email,
-				Photos:    photosResponse,
+				Photos:    &photosResponse,
 				CreatedAt: deletedUser.CreatedAt,
 				UpdatedAt: deletedUser.UpdatedAt,
 			},

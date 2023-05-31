@@ -46,7 +46,6 @@ func (db *Database) Ping() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("PINGEDD")
 	return nil
 }
 

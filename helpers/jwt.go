@@ -10,6 +10,7 @@ import (
 type IWebToken interface {
 	GenerateToken(userId uint) (string, error)
 	ParseToken(tokenStr string) (*UserClaims, error)
+	IsTokenExpired(tokenStr string) (bool, error)
 }
 
 type WebToken struct {
@@ -59,5 +60,17 @@ func (wt *WebToken) ParseToken(tokenStr string) (*UserClaims, error) {
 		return claims, nil
 	} else {
 		return nil, errors.New("token: Token invalid")
+	}
+}
+
+func (wt *WebToken) IsTokenExpired(tokenStr string) (bool, error) {
+	claims := &UserClaims{}
+	_, err := jwt.ParseWithClaims(tokenStr, claims, func(tkn *jwt.Token) (interface{}, error) {
+		return []byte(wt.tokenSecret), nil
+	})
+	if errors.Is(err, jwt.ErrTokenExpired) {
+		return true, nil
+	} else {
+		return false, err
 	}
 }

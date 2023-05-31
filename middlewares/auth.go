@@ -55,6 +55,25 @@ func (authMW *AuthMiddleware) Guard() gin.HandlerFunc {
 		}
 
 		tokenStr := strings.Split(bearerToken, " ")[1]
+
+		isExpired, err := authMW.webToken.IsTokenExpired(tokenStr)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{
+				Status:  "error",
+				Message: err.Error(),
+			})
+			return
+		}
+		if isExpired {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, &app.JsendFailResponse{
+				Status: "fail",
+				Data: gin.H{
+					"token": "token is expired, please login again",
+				},
+			})
+			return
+		}
+
 		claims, err := authMW.webToken.ParseToken(tokenStr)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, &app.JsendErrorResponse{

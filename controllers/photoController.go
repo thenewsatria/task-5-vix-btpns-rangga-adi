@@ -73,7 +73,7 @@ func (photoController *PhotoController) HandleCreatePhoto() gin.HandlerFunc {
 		if file != nil {
 			timeStamp := time.Now().UnixNano()
 			file.Filename = fmt.Sprintf("photos_%d_%d_%s", currentUser.ID, timeStamp, file.Filename)
-			photoCreationRequest.PhotoUrl = fmt.Sprintf("%s://%s/public/%s", c.Request.URL.Scheme, c.Request.Host, file.Filename)
+			photoCreationRequest.PhotoUrl = fmt.Sprintf("http://%s/public/%s", c.Request.Host, file.Filename)
 		}
 
 		// Melakukan validasi pada request
@@ -233,7 +233,7 @@ func (photoController *PhotoController) HandleUpdatePhoto() gin.HandlerFunc {
 		if file != nil {
 			timeStamp := time.Now().UnixNano()
 			file.Filename = fmt.Sprintf("photos_%d_%d_%s", currentUser.ID, timeStamp, file.Filename)
-			photoUpdateRequest.PhotoUrl = fmt.Sprintf("%s://%s/public/%s", c.Request.URL.Scheme, c.Request.Host, file.Filename)
+			photoUpdateRequest.PhotoUrl = fmt.Sprintf("http://%s/public/%s", c.Request.Host, file.Filename)
 		}
 
 		// Melakukan validasi pada data yang diberikan pengguna
